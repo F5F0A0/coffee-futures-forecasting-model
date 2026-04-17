@@ -4,4 +4,4 @@
 
 ![](forecasts/latest_forecast.png)
 
-[`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
+Latest forecast: [`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
