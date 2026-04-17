@@ -1,0 +1,4 @@
+.venv
+pyproject.toml
+__pycache__/
+notebooks/04_deployment_old.ipynb

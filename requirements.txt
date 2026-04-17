@@ -1,0 +1,9 @@
+arch
+ipykernel
+matplotlib
+numpy
+pandas
+scikit-learn
+scipy
+statsmodels
+yfinance
