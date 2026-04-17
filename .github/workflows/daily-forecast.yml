@@ -1,0 +1,46 @@
+name: daily-forecast
+
+# When to run:
+#   - 21:00 UTC weekdays = ~16–17:00 ET (after ICE coffee settles)
+#   - workflow_dispatch lets us trigger manually from the Actions tab
+on:
+  schedule:
+    - cron: "0 21 * * 1-5"
+  workflow_dispatch: {}
+
+# Required so the job can push the updated CSV/PNG back to the repo.
+# Also requires: Settings -> Actions -> General -> Workflow permissions
+#                -> "Read and write permissions" must be enabled.
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run forecast
+        run: python run_forecast.py
+
+      - name: Commit outputs
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add forecasts/latest.csv forecasts/latest.png
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "forecast: $(date -u +%Y-%m-%d)"
+            git push
+          fi
