@@ -86,7 +86,7 @@ def plot_forecast(prices: pd.DataFrame, fc: pd.DataFrame, out_path: Path) -> Non
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.plot(trail["ds"], trail["y"], color="black", lw=1.2, label="Historical prices")
     ax.plot(
-        fc_dates, fc["point"], color="steelblue", ls="--", lw=1.5, label="Point forecast (Naïve)"
+        fc_dates, fc["point"], color="steelblue", ls="--", lw=1.5, label="Point forecast"
     )
     ax.fill_between(
         fc_dates,
