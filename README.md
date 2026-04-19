@@ -1,5 +1,6 @@
 # Coffee Futures Forecasting Model
-- Naïve (pure random walk) point forecast with GJR-GARCH(1,1)-t prediction intervals
+- GJR-GARCH(1,1) with Student-t innovations, constant-mean specification
+- 63-business-day forecast with 80/95% prediction intervals
 - Updates daily at 21:00 UTC (weekdays)
 
 ![](forecasts/latest_forecast.png)
