@@ -105,7 +105,7 @@ def plot_forecast(prices: pd.DataFrame, fc: pd.DataFrame, out_path: Path) -> Non
         label="80% prediction interval",
     )
     ax.axvline(run_date, color="gray", ls=":", alpha=0.6)
-    ax.set_title(f"Coffee futures forecast — origin {run_date.date()}")
+    ax.set_title(f"Coffee futures forecast — last observed value: {run_date.date()}")
     ax.set_xlabel("Date")
     ax.set_ylabel("Price (cents/lb)")
     ax.grid(alpha=0.3)
@@ -129,9 +129,9 @@ def main() -> int:
     plot_forecast(prices, fc, png_path)
 
     p0 = float(prices["y"].iloc[-1])
-    print(f"Forecast origin:   {run_date}")
-    print(f"Last close:        {p0:.2f} cents/lb")
-    print(f"95% PI @ day 63:   [{fc['lo_95'].iloc[-1]:.2f}, {fc['hi_95'].iloc[-1]:.2f}]")
+    print(f"Last observed value: {run_date}")
+    print(f"Last close:          {p0:.2f} cents/lb")
+    print(f"95% PI @ day 63:    [{fc['lo_95'].iloc[-1]:.2f}, {fc['hi_95'].iloc[-1]:.2f}]")
     print(f"Wrote: {csv_path.relative_to(ROOT)}")
     print(f"Wrote: {png_path.relative_to(ROOT)}")
     return 0
