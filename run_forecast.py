@@ -105,7 +105,10 @@ def plot_forecast(prices: pd.DataFrame, fc: pd.DataFrame, out_path: Path) -> Non
         label="80% prediction interval",
     )
     ax.axvline(run_date, color="gray", ls=":", alpha=0.6)
-    ax.set_title(f"Coffee futures forecast — last observed value: {run_date.date()}")
+    ax.text(
+        run_date, ax.get_ylim()[1] * 0.98, "  Last observed value", fontsize=9, color="gray", va="top"
+    )
+    ax.set_title(f"Live Coffee Futures Forecast — {run_date.date()}")
     ax.set_xlabel("Date")
     ax.set_ylabel("Price (cents/lb)")
     ax.grid(alpha=0.3)
