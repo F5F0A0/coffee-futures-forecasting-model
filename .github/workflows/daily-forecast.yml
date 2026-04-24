@@ -28,11 +28,12 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        # Full install. The live pipeline only needs the GARCH + plotting
-        # stack, but coffee_forecast/__init__.py eagerly imports the whole
-        # model suite (torch, statsforecast, prophet, granite-tsfm, etc.),
-        # so a lean install would ImportError before run_forecast.py starts.
-        run: pip install -r requirements.txt
+        # requirements.txt installs third-party deps; `pip install -e . --no-deps`
+        # installs the coffee_forecast package itself so scripts/run_forecast.py
+        # can `from coffee_forecast import ...`.
+        run: |
+          pip install -r requirements.txt
+          pip install -e . --no-deps
 
       - name: Run forecast
         run: |
