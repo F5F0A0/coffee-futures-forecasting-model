@@ -1,9 +1,20 @@
-arch
-ipykernel
-matplotlib
 numpy
 pandas
-scikit-learn
 scipy
+scikit-learn
+matplotlib
+
+statsforecast
 statsmodels
+arch
+prophet
+
 yfinance
+
+torch
+granite-tsfm @ git+https://github.com/ibm-granite/granite-tsfm.git
+
+ordpy
+
+jupyter
+tqdm

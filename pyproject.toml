@@ -1,0 +1,34 @@
+[build-system]
+requires      = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "coffee_forecast"
+version         = "0.1.0"
+description     = "Rolling-window backtesting and forecasting for ICE Coffee C futures"
+readme          = "README.md"
+requires-python = ">=3.11,<3.12"
+authors         = [{ name = "Bridget Brinkman" }]
+license         = { text = "MIT" }
+
+# Run-time deps are duplicated in requirements.txt for non-install users.
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "statsforecast",
+    "statsmodels",
+    "arch",
+    "prophet",
+    "yfinance",
+    "torch",
+    "granite-tsfm @ git+https://github.com/ibm-granite/granite-tsfm.git",
+    "ordpy",
+    "jupyter",
+    "tqdm",
+]
+
+[tool.setuptools.packages.find]
+include = ["coffee_forecast*"]

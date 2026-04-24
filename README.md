@@ -1,8 +1,127 @@
 # Coffee Futures Forecasting Model
-- GJR-GARCH(1,1)-t
-- 63-business-day forecast with 80/95% prediction intervals
-- Updates daily at 21:00 UTC (weekdays)
 
-![](forecasts/latest_forecast.png)
+A **GJR-GARCH(1,1)-t** model that produces a 63-business-day price forecast for
+ICE Coffee C futures with 80% and 95% prediction intervals.
+Updates daily at 21:00 UTC (weekdays).
 
-Latest forecast: [`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
+![Latest forecast](forecasts/latest_forecast.png)
+
+Latest forecast data: [`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
+
+---
+
+This repository is both:
+
+- a **live deployment** of the GJR-GARCH forecasting model above, and
+- a **reproducible research benchmark** backing the paper
+  *"Forecasting Coffee Futures: A Benchmark of Simple and Foundation Models on
+  a Near-Random Series."* The benchmark compares ten models across five
+  categories over 32 years of daily prices (1994&ndash;2026) and motivates
+  the choice of a volatility model for deployment.
+
+## Repo layout
+
+```
+coffee-futures-forecasting-model/
+|-- coffee_forecast/         # Importable Python package
+|   |-- config.py            # Constants, paths, color map
+|   |-- data.py              # load_coffee_data
+|   |-- metrics.py           # calculate_metrics (MAE, RMSE, MAPE, sMAPE, MASE)
+|   |-- models.py            # 5 wrapper classes with a shared predict() API
+|   |-- backtest.py          # get_forecast_origins, run_test, run_multi_scale_backtest
+|   |-- forecastability.py   # Spectral Omega, Permutation Entropy, Hurst + Lo's R/S
+|   |-- stats_tests.py       # Diebold-Mariano, Model Confidence Set
+|   |-- deployment.py        # GJR-GARCH forecast, Yahoo fetch, plotting
+|   `-- viz.py               # Reusable plotting helpers
+|-- notebooks/               # Ordered walk-through of the analysis
+|   |-- 01_backtest.ipynb
+|   |-- 02_forecastability.ipynb
+|   |-- 03_statistical_tests.ipynb
+|   |-- 04_per_model_plots.ipynb
+|   `-- 05_deployment_garch.ipynb
+|-- scripts/
+|   |-- run_backtest.py      # CLI equivalent of notebook 01
+|   `-- run_forecast.py      # Daily deployment runner (cron / GitHub Actions)
+|-- data/
+|   `-- coffee.csv           # 8,104 daily closes, columns: ds, y
+|-- results/                 # Research-benchmark outputs (CSVs + figures)
+|   |-- csv/
+|   `-- figures/
+`-- forecasts/               # Live-deployment outputs (updated daily)
+    |-- latest_forecast.png
+    `-- latest_forecast.csv
+```
+
+## Setup
+
+**Prerequisites:** Python 3.11 (tested on 3.11.15). `pyproject.toml` pins
+`>=3.11,<3.12`; the exact resolved environment is captured in
+`requirements.lock.txt`.
+
+```bash
+git clone <repo-url>
+cd coffee-futures-forecasting-model
+
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+pip install -e .                 # installs the coffee_forecast package
+```
+
+The editable install lets notebooks write `from coffee_forecast import ...`
+without any `sys.path` hacks.
+
+## Running the benchmark
+
+From a notebook:
+
+```python
+from coffee_forecast import load_coffee_data, run_multi_scale_backtest
+
+df = load_coffee_data()
+summary, step_errors = run_multi_scale_backtest(df, models, scales=[1, 10, 30, 60])
+```
+
+or from the command line:
+
+```bash
+python scripts/run_backtest.py
+```
+
+Both produce `results/csv/summary_all_scales.csv` and
+`results/csv/step_errors_all_scales.csv`, which feed every downstream
+notebook.
+
+## Running the live forecast
+
+The deployment pipeline is a single script:
+
+```bash
+python scripts/run_forecast.py
+```
+
+It loads the committed history, appends any newer Coffee C futures closes
+from Yahoo Finance (`KC=F`), fits GJR-GARCH(1,1)-t on log-returns, and
+writes a 63-day forecast to `forecasts/latest_forecast.csv` and
+`forecasts/latest_forecast.png`. The same script is what regenerates the
+image at the top of this README on its daily schedule.
+
+## Notebook order
+
+1. `01_backtest.ipynb` &mdash; Load data, define the 10-model suite, run the
+   rolling-window backtest at 4 scales, export CSVs.
+2. `02_forecastability.ipynb` &mdash; A priori forecastability diagnostics
+   (Spectral Predictability, Permutation Entropy, Hurst + Lo's modified
+   R/S) establishing the near-random prior.
+3. `03_statistical_tests.ipynb` &mdash; Diebold-Mariano and Model Confidence
+   Set applied to the 60-origin benchmark output.
+4. `04_per_model_plots.ipynb` &mdash; MAE convergence, 60-origin
+   distributions, per-origin comparisons, and a single-holdout forecast.
+5. `05_deployment_garch.ipynb` &mdash; Validates GJR-GARCH(1,1)-t as the
+   live-deployment model (drift test, distribution fit, ARCH test, model
+   comparison, expanding-window coverage check) and produces the live
+   forecast CSV + PNG in `forecasts/`.
+
+## Citation
+
+If you use this code, please cite the accompanying paper.

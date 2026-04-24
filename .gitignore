@@ -1,5 +1,4 @@
 .venv
-pyproject.toml
 __pycache__/
-notebooks/04_deployment_old.ipynb
 .DS_Store
+*.egg-info/

@@ -28,13 +28,16 @@ jobs:
           cache: pip
 
       - name: Install dependencies
+        # Full install. The live pipeline only needs the GARCH + plotting
+        # stack, but coffee_forecast/__init__.py eagerly imports the whole
+        # model suite (torch, statsforecast, prophet, granite-tsfm, etc.),
+        # so a lean install would ImportError before run_forecast.py starts.
         run: pip install -r requirements.txt
 
       - name: Run forecast
         run: |
-          python run_forecast.py
+          python scripts/run_forecast.py
           python -c "import pandas as pd; print(pd.read_csv('forecasts/latest_forecast.csv')['run_date'].iloc[0])" > /tmp/run_date
-      
 
       - name: Commit outputs
         run: |
