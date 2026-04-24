@@ -28,11 +28,14 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        # requirements.txt installs third-party deps; `pip install -e . --no-deps`
-        # installs the coffee_forecast package itself so scripts/run_forecast.py
-        # can `from coffee_forecast import ...`.
+        # Lean install: the live pipeline only touches the GARCH + plotting
+        # stack. Heavy research deps (torch, granite-tsfm, prophet,
+        # statsforecast, ordpy, statsmodels, sklearn) are lazy-imported
+        # inside the wrapper classes they belong to, so they stay off the
+        # CI image. --no-deps prevents pip from re-resolving the package's
+        # full dependency list from pyproject.toml.
         run: |
-          pip install -r requirements.txt
+          pip install numpy pandas scipy matplotlib arch yfinance
           pip install -e . --no-deps
 
       - name: Run forecast

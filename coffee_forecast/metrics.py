@@ -10,11 +10,6 @@ from __future__ import annotations
 from typing import Dict
 
 import numpy as np
-from sklearn.metrics import (
-    mean_absolute_error,
-    mean_absolute_percentage_error,
-    mean_squared_error,
-)
 
 
 def calculate_metrics(
@@ -51,9 +46,9 @@ def calculate_metrics(
     y_hat   = np.asarray(y_hat,   dtype=float)
     train_y = np.asarray(train_y, dtype=float)
 
-    mae   = mean_absolute_error(y_true, y_hat)
-    rmse  = np.sqrt(mean_squared_error(y_true, y_hat))
-    mape  = mean_absolute_percentage_error(y_true, y_hat)
+    mae   = np.mean(np.abs(y_true - y_hat))
+    rmse  = np.sqrt(np.mean((y_true - y_hat) ** 2))
+    mape  = np.mean(np.abs((y_true - y_hat) / y_true))
     smape = np.mean(
         2.0 * np.abs(y_true - y_hat)
         / (np.abs(y_true) + np.abs(y_hat) + 1e-8)
