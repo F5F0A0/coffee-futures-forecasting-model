@@ -6,7 +6,9 @@ Updates daily at 21:00 UTC (weekdays).
 
 ![Latest forecast](forecasts/latest_forecast.png)
 
-Latest forecast data: [`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
+Latest forecast: [`forecasts/latest_forecast.csv`](forecasts/latest_forecast.csv)
+
+Past runs: [`forecasts/archive/`](forecasts/archive/)
 
 ---
 
@@ -35,9 +37,9 @@ coffee-futures-forecasting-model/
 |   `-- viz.py               # Reusable plotting helpers
 |-- notebooks/               # Ordered walk-through of the analysis
 |   |-- 01_backtest.ipynb
-|   |-- 02_forecastability.ipynb
+|   |-- 02_per_model_plots.ipynb
 |   |-- 03_statistical_tests.ipynb
-|   |-- 04_per_model_plots.ipynb
+|   |-- 04_forecastability.ipynb
 |   `-- 05_deployment_garch.ipynb
 |-- scripts/
 |   |-- run_backtest.py      # CLI equivalent of notebook 01
@@ -48,8 +50,9 @@ coffee-futures-forecasting-model/
 |   |-- csv/
 |   `-- figures/
 `-- forecasts/               # Live-deployment outputs (updated daily)
-    |-- latest_forecast.png
-    `-- latest_forecast.csv
+    |-- latest_forecast.png  # most recent forecast plot (overwritten daily)
+    |-- latest_forecast.csv  # most recent forecast (overwritten daily)
+    `-- archive/             # per-run CSV snapshots (datestamped, retained)
 ```
 
 ## Setup
@@ -108,15 +111,17 @@ image at the top of this README on its daily schedule.
 
 ## Notebook order
 
-1. `01_backtest.ipynb` &mdash; Load data, define the 10-model suite, run the
-   rolling-window backtest at 4 scales, export CSVs.
-2. `02_forecastability.ipynb` &mdash; A priori forecastability diagnostics
-   (Spectral Predictability, Permutation Entropy, Hurst + Lo's modified
-   R/S) establishing the near-random prior.
+1. `01_backtest.ipynb` &mdash; Load data, assemble the 10-model suite,
+   run a single-holdout snapshot forecast (sanity check), then the
+   rolling-window backtest at 4 scales (1, 10, 30, 60 origins), export CSVs.
+2. `02_per_model_plots.ipynb` &mdash; MAE convergence across scales,
+   60-origin distribution, and a per-origin deep dive (Granite TTM vs. RWD).
 3. `03_statistical_tests.ipynb` &mdash; Diebold-Mariano and Model Confidence
-   Set applied to the 60-origin benchmark output.
-4. `04_per_model_plots.ipynb` &mdash; MAE convergence, 60-origin
-   distributions, per-origin comparisons, and a single-holdout forecast.
+   Set applied to the 60-origin benchmark output, establishing that nine
+   of ten models are jointly indistinguishable at $\alpha = 0.10$.
+4. `04_forecastability.ipynb` &mdash; A priori forecastability diagnostics
+   (Spectral Predictability, Permutation Entropy, Hurst + Lo's modified
+   R/S) explaining *why* simple baselines aren't beaten on this series.
 5. `05_deployment_garch.ipynb` &mdash; Validates GJR-GARCH(1,1)-t as the
    live-deployment model (drift test, distribution fit, ARCH test, model
    comparison, expanding-window coverage check) and produces the live

@@ -249,6 +249,8 @@ def plot_forecast(
     Same layout as the live-deployment image in the README so the figure in
     the paper and the figure on GitHub stay in sync.
     """
+    import datetime as _dt
+
     import matplotlib.pyplot as plt
 
     run_date = pd.Timestamp(fc["run_date"].iloc[0])
@@ -269,12 +271,93 @@ def plot_forecast(
     ax.axvline(run_date, color="gray", ls=":", alpha=0.6)
     ax.text(run_date, ax.get_ylim()[1] * 0.98, "  Last observed value",
             fontsize=9, color="gray", va="top")
-    ax.set_title(f"Live Coffee Futures Forecast - {run_date.date()}")
+
+    run_stamp = (
+        str(fc["run_date"].iloc[0])
+        if "run_date" in fc.columns
+        else _dt.date.today().isoformat()
+    )
+    ax.set_title(
+        f"Live Coffee Futures Forecast - {run_date.date()}",
+        fontsize=13, fontweight="semibold", pad=12,
+    )
     ax.set_xlabel("Date")
     ax.set_ylabel("Price (cents/lb)")
     ax.grid(alpha=0.3)
     ax.legend(loc="upper left")
+
+    last_date = prices["ds"].iloc[-1]
+    last_price = prices["y"].iloc[-1]
+    ax.annotate(
+        f"{last_price:.2f}",
+        xy=(last_date, last_price),
+        xytext=(-8, 8),
+        textcoords="offset points",
+        ha="right", va="bottom",
+        fontsize=9, color="black", fontweight="semibold",
+    )
+
+    first_fc_date = fc["target_date"].iloc[0]
+    first_fc_value = fc["point"].iloc[0]
+    ax.annotate(
+        f"{first_fc_value:.1f}",
+        xy=(first_fc_date, first_fc_value),
+        xytext=(8, -10),
+        textcoords="offset points",
+        ha="left", va="top",
+        fontsize=9, color="#1f6091", fontweight="semibold",
+    )
+
+    last_fc_date = fc["target_date"].iloc[-1]
+    ax.annotate(f"{fc['hi_95'].iloc[-1]:.1f}",
+                xy=(last_fc_date, fc['hi_95'].iloc[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                ha="left", va="center", fontsize=8, color="#888")
+    ax.annotate(f"{fc['lo_95'].iloc[-1]:.1f}",
+                xy=(last_fc_date, fc['lo_95'].iloc[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                ha="left", va="center", fontsize=8, color="#888")
+    ax.annotate(f"{fc['hi_80'].iloc[-1]:.1f}",
+                xy=(last_fc_date, fc['hi_80'].iloc[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                ha="left", va="center", fontsize=9, color="#1f6091",
+                fontweight="semibold")
+    ax.annotate(f"{fc['lo_80'].iloc[-1]:.1f}",
+                xy=(last_fc_date, fc['lo_80'].iloc[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                ha="left", va="center", fontsize=9, color="#1f6091",
+                fontweight="semibold")
+
+    ax.set_xlim(right=last_fc_date + pd.Timedelta(days=10))
+
+    ax.hlines(
+        y=last_price,
+        xmin=last_date,
+        xmax=last_fc_date,
+        linestyles="dotted",
+        colors="gray",
+        linewidth=0.8,
+        alpha=0.5,
+        zorder=1,
+    )
+
+    fig.text(
+        0.5, -0.02,
+        "GJR-GARCH(1,1)-t with Student-t innovations. Bands show 80% and 95% "
+        "probability ranges; empirical coverage is within 3 pp of nominal "
+        "across a 60-origin backtest.",
+        ha="center", va="top",
+        fontsize=8, color="#555", style="italic",
+    )
+
+    fig.text(
+        0.99, -0.05,
+        f"ICE Coffee 'C' (KC=F)  -  Source: Yahoo Finance  -  Run: {run_stamp}",
+        ha="right", va="top",
+        fontsize=7, color="#999",
+    )
+
     fig.tight_layout()
     if out_path is not None:
-        fig.savefig(out_path, dpi=150)
+        fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)

@@ -30,10 +30,17 @@ def main() -> int:
     csv_path = FORECASTS_DIR / "latest_forecast.csv"
     png_path = FORECASTS_DIR / "latest_forecast.png"
     fc.to_csv(csv_path, index=False)
+
+    # --- Archive: per-run CSV snapshot --------------------------------------
+    archive_csv_dir = FORECASTS_DIR / "archive"
+    archive_csv_dir.mkdir(parents=True, exist_ok=True)
+    run_date = str(fc["run_date"].iloc[0])
+    archive_csv_path = archive_csv_dir / f"{run_date}.csv"
+    fc.to_csv(archive_csv_path, index=False)
+
     plot_forecast(prices, fc, png_path)
 
     p0       = float(prices["y"].iloc[-1])
-    run_date = fc["run_date"].iloc[0]
     print(f"Last observed value: {run_date}")
     print(f"Last close:          {p0:.2f} cents/lb")
     print(
@@ -42,6 +49,7 @@ def main() -> int:
     )
     print(f"Wrote: {csv_path.relative_to(REPO_ROOT)}")
     print(f"Wrote: {png_path.relative_to(REPO_ROOT)}")
+    print(f"Wrote: {archive_csv_path.relative_to(REPO_ROOT)}")
     return 0
 
 
