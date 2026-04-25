@@ -36,16 +36,18 @@ coffee-futures-forecasting-model/
 |   |-- deployment.py        # GJR-GARCH forecast, Yahoo fetch, plotting
 |   `-- viz.py               # Reusable plotting helpers
 |-- notebooks/               # Ordered walk-through of the analysis
-|   |-- 01_backtest.ipynb
-|   |-- 02_per_model_plots.ipynb
-|   |-- 03_statistical_tests.ipynb
+|   |-- 01_backtest_run.ipynb
+|   |-- 02_backtest_plots.ipynb
+|   |-- 03_backtest_stats.ipynb
 |   |-- 04_forecastability.ipynb
 |   `-- 05_deployment_garch.ipynb
 |-- scripts/
-|   |-- run_backtest.py      # CLI equivalent of notebook 01
-|   `-- run_forecast.py      # Daily deployment runner (cron / GitHub Actions)
+|   |-- run_backtest.py        # CLI equivalent of notebook 01
+|   |-- run_forecast.py        # Daily deployment runner (cron / GitHub Actions)
+|   `-- export_csv.py          # One-time .xls -> .csv conversion (rerun after .xls re-download)
 |-- data/
-|   `-- coffee.csv           # 8,104 daily closes, columns: ds, y
+|   |-- Coffee_Historical_Prices.xls  # Raw ICE source (Coffee C, downloaded Feb 2026)
+|   `-- coffee.csv                    # Cleaned: 8,104 daily closes (ds, y)
 |-- results/                 # Research-benchmark outputs (CSVs + figures)
 |   |-- csv/
 |   `-- figures/
@@ -111,17 +113,19 @@ image at the top of this README on its daily schedule.
 
 ## Notebook order
 
-1. `01_backtest.ipynb` &mdash; Load data, assemble the 10-model suite,
-   run a single-holdout snapshot forecast (sanity check), then the
-   rolling-window backtest at 4 scales (1, 10, 30, 60 origins), export CSVs.
-2. `02_per_model_plots.ipynb` &mdash; MAE convergence across scales,
+1. `01_backtest_run.ipynb` &mdash; Load data, assemble the 10-model suite,
+   run a single-window first test, then the rolling-window backtest at
+   4 scales (1, 10, 30, 60 origins), export CSVs.
+2. `02_backtest_plots.ipynb` &mdash; MAE convergence across scales,
    60-origin distribution, and a per-origin deep dive (Granite TTM vs. RWD).
-3. `03_statistical_tests.ipynb` &mdash; Diebold-Mariano and Model Confidence
+3. `03_backtest_stats.ipynb` &mdash; Diebold-Mariano and Model Confidence
    Set applied to the 60-origin benchmark output, establishing that nine
    of ten models are jointly indistinguishable at $\alpha = 0.10$.
-4. `04_forecastability.ipynb` &mdash; A priori forecastability diagnostics
-   (Spectral Predictability, Permutation Entropy, Hurst + Lo's modified
-   R/S) explaining *why* simple baselines aren't beaten on this series.
+4. `04_forecastability.ipynb` &mdash; A priori forecastability diagnostics:
+   unit-root tests (ADF, KPSS, Phillips-Perron), Spectral Predictability,
+   Permutation Entropy, Hurst + Lo's modified R/S, Lo-MacKinlay variance
+   ratio, and the largest Lyapunov exponent. Explains *why* simple
+   baselines aren't beaten on this series.
 5. `05_deployment_garch.ipynb` &mdash; Validates GJR-GARCH(1,1)-t as the
    live-deployment model (drift test, distribution fit, ARCH test, model
    comparison, expanding-window coverage check) and produces the live
