@@ -3,7 +3,7 @@ pandas
 scipy
 scikit-learn
 matplotlib
-xlrd  # required by scripts/export_csv.py to read the .xls source
+xlrd
 
 statsforecast
 statsmodels

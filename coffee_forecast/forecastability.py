@@ -57,9 +57,10 @@ def calculate_spectral_predictability(series: np.ndarray) -> float:
     # Hann window to mitigate spectral leakage from finite-length effects.
     windowed = detrended * np.hanning(len(detrended))
 
-    # Power spectral density from the real FFT.
+    # Power spectral density from the real FFT, excluding the DC bin so any
+    # residual drift after detrending does not contribute to the entropy.
     fft_vals = np.fft.rfft(windowed)
-    psd      = np.abs(fft_vals) ** 2
+    psd      = np.abs(fft_vals[1:]) ** 2
     psd_norm = psd / np.sum(psd)
 
     # Shannon entropy of the PSD (eps prevents log(0)).
@@ -182,7 +183,7 @@ def calculate_hurst_exponent(
                                 np.log(rs_means[valid]))
 
     # --- Lo (1991) modified R/S test ---
-    q       = int(np.floor(T ** (1 / 3)))         # Andrews-style bandwidth
+    q       = int(np.floor(T ** (1 / 3)))         # Lo (1991) fixed bandwidth, q = floor(T^(1/3))
     e       = log_returns - log_returns.mean()
     X       = np.cumsum(e)
     R       = X.max() - X.min()

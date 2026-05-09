@@ -26,7 +26,7 @@ def _style(ax: plt.Axes, alpha: float = 0.15) -> None:
 
 def plot_price_series(
     df: pd.DataFrame,
-    title: str = "ICE Coffee C Futures - Daily Close (1994-2026)",
+    title: str = "ICE Coffee C Futures - Daily Nearby Close (1994-2026)",
     save_path: Union[str, Path, None] = None,
     figsize: tuple = (14, 4),
     dpi: int = 180,

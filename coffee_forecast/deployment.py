@@ -300,7 +300,7 @@ def plot_forecast(
     first_fc_date = fc["target_date"].iloc[0]
     first_fc_value = fc["point"].iloc[0]
     ax.annotate(
-        f"{first_fc_value:.1f}",
+        f"{first_fc_value:.2f}",
         xy=(first_fc_date, first_fc_value),
         xytext=(8, -10),
         textcoords="offset points",
@@ -309,20 +309,25 @@ def plot_forecast(
     )
 
     last_fc_date = fc["target_date"].iloc[-1]
-    ax.annotate(f"{fc['hi_95'].iloc[-1]:.1f}",
+    ax.annotate(f"{fc['hi_95'].iloc[-1]:.2f}",
                 xy=(last_fc_date, fc['hi_95'].iloc[-1]),
                 xytext=(4, 0), textcoords="offset points",
                 ha="left", va="center", fontsize=8, color="#888")
-    ax.annotate(f"{fc['lo_95'].iloc[-1]:.1f}",
+    ax.annotate(f"{fc['lo_95'].iloc[-1]:.2f}",
                 xy=(last_fc_date, fc['lo_95'].iloc[-1]),
                 xytext=(4, 0), textcoords="offset points",
                 ha="left", va="center", fontsize=8, color="#888")
-    ax.annotate(f"{fc['hi_80'].iloc[-1]:.1f}",
+    ax.annotate(f"{fc['hi_80'].iloc[-1]:.2f}",
                 xy=(last_fc_date, fc['hi_80'].iloc[-1]),
                 xytext=(4, 0), textcoords="offset points",
                 ha="left", va="center", fontsize=9, color="#1f6091",
                 fontweight="semibold")
-    ax.annotate(f"{fc['lo_80'].iloc[-1]:.1f}",
+    ax.annotate(f"{fc['point'].iloc[-1]:.2f}",
+                xy=(last_fc_date, fc['point'].iloc[-1]),
+                xytext=(4, 0), textcoords="offset points",
+                ha="left", va="center", fontsize=9, color="#1f6091",
+                fontweight="semibold")
+    ax.annotate(f"{fc['lo_80'].iloc[-1]:.2f}",
                 xy=(last_fc_date, fc['lo_80'].iloc[-1]),
                 xytext=(4, 0), textcoords="offset points",
                 ha="left", va="center", fontsize=9, color="#1f6091",

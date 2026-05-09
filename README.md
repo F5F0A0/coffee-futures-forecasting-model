@@ -53,7 +53,12 @@ coffee-futures-forecasting-model/
 `-- forecasts/               # Live-deployment outputs (updated daily)
     |-- latest_forecast.png  # most recent forecast plot (overwritten daily)
     |-- latest_forecast.csv  # most recent forecast (overwritten daily)
-    `-- archive/             # per-run CSV snapshots (datestamped, retained)
+    `-- archive/             # per-run CSV snapshots, organized YYYY/MM/
+        `-- 2026/
+            |-- 04/
+            |   `-- 2026-04-24.csv      # one file per run day
+            `-- 05/
+                `-- 2026-05-01.csv
 ```
 
 ## Setup

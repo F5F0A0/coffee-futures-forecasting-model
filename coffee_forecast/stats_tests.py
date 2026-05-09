@@ -3,18 +3,20 @@ Rigorous model-comparison tests applied to per-origin loss series.
 
 Two complementary tools:
 
-  - Diebold-Mariano (1995) : pairwise test for equal predictive accuracy,
-    with a Newey-West HAC variance estimate.
+  - Diebold-Mariano (1995) with the Harvey-Leybourne-Newbold (1997)
+    small-sample correction, and a Newey-West HAC variance estimate.
 
   - Model Confidence Set (Hansen, Lunde & Nason, 2011) : joint procedure
     that returns the smallest set of models which is statistically
-    indistinguishable from the best at level alpha.
+    indistinguishable from the best at level alpha. Reported p-values
+    are monotonically adjusted along the elimination order, per HLN.
 
 Both consume the per-origin loss differentials the backtest exports in
 ``step_errors_all_scales.csv``.
 """
 from __future__ import annotations
 
+import warnings
 from typing import Dict, List, Tuple
 
 import numpy as np
@@ -23,7 +25,7 @@ from scipy import stats
 
 
 # ---------------------------------------------------------------------------
-# Diebold-Mariano (1995)
+# Diebold-Mariano (1995) with Harvey-Leybourne-Newbold (1997) correction
 # ---------------------------------------------------------------------------
 def diebold_mariano_test(
     losses_a,
@@ -31,33 +33,46 @@ def diebold_mariano_test(
     h: int = 1,
 ) -> Tuple[float, float]:
     """
-    Diebold-Mariano test for equal predictive accuracy.
+    Diebold-Mariano test for equal predictive accuracy with the
+    Harvey-Leybourne-Newbold (1997) small-sample correction.
 
     Compares two per-origin loss series (e.g., per-window MAE) and tests
     whether their expected losses are equal. Uses a Newey-West HAC
-    variance estimator with Andrews' (1991) automatic bandwidth, with a
-    minimum of ``h - 1`` lags to handle the MA(h-1) dependence induced by
-    h-step-ahead forecasting.
+    variance estimate (Bartlett kernel, Newey & West 1994 rule-of-thumb
+    bandwidth ``floor(4 * (T/100)^(2/9))``), with a minimum of ``h - 1``
+    lags to handle the MA(h-1) dependence induced by h-step-ahead
+    forecasting.
+
+    The HLN correction multiplies the raw DM statistic by
+    ``sqrt((T + 1 - 2h + h(h-1)/T) / T)`` and references it against the
+    Student-t distribution with ``T - 1`` degrees of freedom rather than
+    the standard Normal. The correction reduces the size distortion of
+    standard DM at small T (which over-rejects H_0); at large T both
+    converge.
 
     Parameters
     ----------
     losses_a, losses_b : array-like
-        Per-origin losses for models A and B (same length).
+        Per-origin losses for models A and B (same length, length ``T``).
     h : int
-        Forecast horizon (default 1). Sets the minimum HAC lag at h-1.
+        Forecast horizon (default 1). Sets the minimum HAC lag at h-1
+        and enters the HLN correction factor.
 
     Returns
     -------
     dm_stat : float
-        DM test statistic. Positive => A is worse than B. Negative => A better.
+        HLN-corrected DM statistic. Positive => A worse than B; negative
+        => A better. ``nan`` if the variance estimate is non-positive
+        (e.g., identical loss series); a warning is emitted in that case.
     p_value : float
-        Two-sided p-value under H0 of equal accuracy, DM ~ N(0, 1).
+        Two-sided p-value under H_0 of equal accuracy, referenced against
+        the t(T-1) distribution.
     """
     d     = np.asarray(losses_a, float) - np.asarray(losses_b, float)
     T     = len(d)
     d_bar = d.mean()
 
-    # Newey-West HAC variance of the mean of d.
+    # Newey-West HAC variance of the mean of d (Bartlett kernel).
     max_lag = max(h - 1, int(np.floor(4 * (T / 100) ** (2 / 9))))
     x       = d - d_bar
     V       = float(np.dot(x, x)) / T                        # gamma_0
@@ -66,9 +81,22 @@ def diebold_mariano_test(
         gamma_k = float(np.dot(x[k:], x[:-k])) / T
         V      += 2.0 * w * gamma_k
 
-    se      = np.sqrt(max(V, 1e-12) / T)
-    dm_stat = d_bar / se
-    p_value = 2.0 * (1.0 - stats.norm.cdf(abs(dm_stat)))
+    if V <= 0.0:
+        warnings.warn(
+            "Diebold-Mariano: HAC variance estimate is non-positive; "
+            "loss series may be identical or numerically degenerate. "
+            "Returning (nan, nan).",
+            stacklevel=2,
+        )
+        return float("nan"), float("nan")
+
+    se         = np.sqrt(V / T)
+    dm_raw     = d_bar / se
+
+    # Harvey-Leybourne-Newbold (1997) small-sample correction.
+    hln_factor = np.sqrt((T + 1 - 2 * h + h * (h - 1) / T) / T)
+    dm_stat    = hln_factor * dm_raw
+    p_value    = 2.0 * (1.0 - stats.t.cdf(abs(dm_stat), df=T - 1))
 
     return float(dm_stat), float(p_value)
 
@@ -80,7 +108,7 @@ def model_confidence_set(
     losses_dict: Dict[str, np.ndarray],
     alpha: float = 0.10,
     block_size: int = 5,
-    n_boot: int = 1000,
+    n_boot: int = 5000,
     seed: int = 42,
 ) -> Tuple[List[str], pd.DataFrame]:
     """
@@ -96,11 +124,14 @@ def model_confidence_set(
     ---------
     1. Start with M = all models.
     2. Build loss differentials d_i,t = L_i,t - mean_j L_j,t over the
-       current active set and compute the max-t statistic T_R.
+       current active set and compute the max-t statistic T_max.
     3. Obtain a null p-value via circular block bootstrap, centering the
-       resampled differentials at 0 to simulate H0 (equal accuracy).
-    4. If p <= alpha, eliminate the model with the largest t_i and record
-       its p-value. Otherwise stop.
+       resampled differentials at 0 to simulate H_0 (equal accuracy).
+    4. If p <= alpha, eliminate the model with the largest t_i; its
+       reported MCS p-value is the running maximum of all elimination
+       p-values up to and including this step (HLN's monotonicity
+       adjustment, so a model eliminated later cannot have a smaller
+       MCS p-value than one eliminated earlier).
     5. Repeat until no model can be rejected.
 
     Models surviving at level alpha are jointly indistinguishable from
@@ -116,7 +147,7 @@ def model_confidence_set(
     block_size : int
         Length of each resampled block (default 5).
     n_boot : int
-        Number of bootstrap replications (default 1000).
+        Number of bootstrap replications (default 5000).
     seed : int
         Random seed for reproducibility.
 
@@ -126,8 +157,8 @@ def model_confidence_set(
         Models surviving in the MCS (statistically best-tier).
     results_df : pd.DataFrame
         Columns ``model, mcs_p_value, in_mcs``. Surviving models have
-        ``mcs_p_value == 1.0``; eliminated models have the p-value at
-        which they were rejected.
+        ``mcs_p_value == 1.0``; eliminated models have the HLN-adjusted
+        (monotonically non-decreasing along elimination order) p-value.
     """
     rng   = np.random.default_rng(seed)
     names = list(losses_dict.keys())
@@ -161,6 +192,7 @@ def model_confidence_set(
 
     active: List[int]        = list(range(len(names)))
     p_values: Dict[str, float] = {}
+    running_max_p: float       = 0.0  # HLN monotonicity adjustment
 
     for _ in range(len(names) - 1):
         if len(active) <= 1:
@@ -179,12 +211,13 @@ def model_confidence_set(
             D_b_h0        = D_b - d_bar_obs            # center under H0
             boot_max_t[b] = float(_t_stats(D_b_h0).max())
 
-        p_val = float(np.mean(boot_max_t >= T_obs))
+        p_val          = float(np.mean(boot_max_t >= T_obs))
+        running_max_p  = max(running_max_p, p_val)     # HLN: monotone p-values
 
         if p_val <= alpha:
             worst_local                  = int(np.argmax(t_obs))
             worst_global                 = active[worst_local]
-            p_values[names[worst_global]] = p_val
+            p_values[names[worst_global]] = running_max_p
             active.remove(worst_global)
         else:
             break

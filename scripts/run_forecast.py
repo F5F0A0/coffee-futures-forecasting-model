@@ -12,6 +12,16 @@ Usage:
 from __future__ import annotations
 
 import sys
+from pathlib import Path
+
+# Make `coffee_forecast` importable whether or not `pip install -e .` is
+# in effect. No-op when the package is installed; falls back to inserting
+# the repo root on sys.path so the script runs from a fresh clone (or when
+# the local venv's pip is in a broken state).
+try:
+    import coffee_forecast  # noqa: F401  # probe; actual imports happen below
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from coffee_forecast import load_coffee_data, forecast, fetch_latest, plot_forecast
 from coffee_forecast.config import FORECASTS_DIR, REPO_ROOT
@@ -31,10 +41,11 @@ def main() -> int:
     png_path = FORECASTS_DIR / "latest_forecast.png"
     fc.to_csv(csv_path, index=False)
 
-    # --- Archive: per-run CSV snapshot --------------------------------------
-    archive_csv_dir = FORECASTS_DIR / "archive"
+    # --- Archive: per-run CSV snapshot, organized by YYYY/MM ----------------
+    run_date = str(fc["run_date"].iloc[0])  # YYYY-MM-DD
+    year, month, _ = run_date.split("-")
+    archive_csv_dir = FORECASTS_DIR / "archive" / year / month
     archive_csv_dir.mkdir(parents=True, exist_ok=True)
-    run_date = str(fc["run_date"].iloc[0])
     archive_csv_path = archive_csv_dir / f"{run_date}.csv"
     fc.to_csv(archive_csv_path, index=False)
 
