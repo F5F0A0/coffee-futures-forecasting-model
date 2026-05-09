@@ -34,9 +34,10 @@ def load_coffee_data(file_path: Union[str, Path, None] = None) -> pd.DataFrame:
 
     Notes
     -----
-    - Invalid / non-numeric rows in ``y`` are dropped silently. The original
-      XLS had a handful of empty cells; this keeps the cleaned view sorted
-      and contiguous.
+    - Cleaning (numeric coercion, dropping the XLS header rows) happens
+      once in ``scripts/export_csv.py``. This loader trusts the resulting
+      CSV and raises on malformed rows rather than silently masking them,
+      so a corrupted CSV surfaces immediately.
     - Dates are normalized so downstream date arithmetic never trips over
       mixed 00:00:00 / business-hours timestamps.
     """
@@ -49,11 +50,8 @@ def load_coffee_data(file_path: Union[str, Path, None] = None) -> pd.DataFrame:
 
     df = pd.read_csv(path)
 
-    # Coerce price column to numeric, drop any invalid entries.
-    df["y"] = pd.to_numeric(df["y"], errors="coerce")
-    df = df.dropna(subset=["y"]).reset_index(drop=True)
-
-    # Normalize timestamps so all dates sit at midnight.
+    # Trust the cleaned CSV; raise (don't coerce) if a row is malformed.
+    df["y"]  = pd.to_numeric(df["y"])
     df["ds"] = pd.to_datetime(df["ds"]).dt.normalize()
 
     # Chronological ordering is assumed by every downstream function.

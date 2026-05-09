@@ -3,9 +3,9 @@ Live deployment: GJR-GARCH(1,1)-t forecast with calibrated prediction intervals.
 
 The research repo chooses GJR-GARCH(1,1) with standardized Student-t innovations
 as the production model for daily-cadence price-path forecasts. The justification
-lives in ``notebooks/05_deployment_garch.ipynb``:
+lives in ``notebooks/04_deployment_garch.ipynb``:
 
-  - simple baselines win on *point* accuracy (notebook 03: MCS contains them all),
+  - simple baselines win on *point* accuracy (notebook 02: MCS contains them all),
     but none of them produce prediction intervals;
   - log-returns exhibit strong volatility clustering (ARCH test, ACF^2), and
     heavy tails (fitted nu ~ 5.6), which a normal GARCH cannot model;
@@ -246,8 +246,8 @@ def plot_forecast(
     """
     Trailing history + point forecast + 80%/95% PIs, all on one chart.
 
-    Same layout as the live-deployment image in the README so the figure in
-    the paper and the figure on GitHub stay in sync.
+    Same layout as the live-deployment image in the README; this function
+    regenerates that image on each daily run.
     """
     import datetime as _dt
 

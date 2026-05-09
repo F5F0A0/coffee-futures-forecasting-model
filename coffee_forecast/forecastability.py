@@ -8,10 +8,10 @@ predictable a time series is *before* any model sees it:
   - Permutation Entropy             : ordinal-pattern complexity
   - Hurst Exponent (with Lo's test) : long-range dependence in returns
 
-These are the diagnostics that motivate the core claim of the paper: coffee
+These are the diagnostics that motivate the core empirical finding: coffee
 futures prices behave near-randomly, so simple baselines should be hard to
 beat. This module exposes them as standalone callables; the interpretation
-and synthesis happens in ``notebooks/02_forecastability.ipynb``.
+and synthesis happens in ``notebooks/03_forecastability.ipynb``.
 """
 from __future__ import annotations
 
@@ -37,8 +37,8 @@ def calculate_spectral_predictability(series: np.ndarray) -> float:
     structure (higher forecastability); below ~0.20 indicates a near-flat
     spectrum (low forecastability).
 
-    We use the discrete-length normalization log(N_freq) rather than the
-    paper's continuous-time constant log(2*pi). Paper's normalization
+    We use the discrete-length normalization log(N_freq) rather than
+    Wang & Klee's continuous-time constant log(2*pi). Their normalization
     produces values outside [0, 1] on long discrete series because
     log(N_freq) >> log(2*pi) when T is large. Normalizing by the white-noise
     entropy at the same length keeps Omega in [0, 1] and makes the 0.20

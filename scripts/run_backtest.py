@@ -43,7 +43,7 @@ from coffee_forecast.config import CONTEXT_LEN, CSV_DIR, HORIZON, SCALES, SEED
 
 
 def build_models() -> dict:
-    """Assemble the 10-model suite used in the paper."""
+    """Assemble the 10-model suite used in the benchmark."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Loading IBM Granite TTM on {device.upper()}...")
 

@@ -168,22 +168,18 @@ def run_multi_scale_backtest(
         if verbose:
             print(f"\nRunning {scale} forecast origin(s)...")
         for name, wrapper in models.items():
-            try:
-                res_df, step_errors = run_test(
-                    df, wrapper,
-                    num_windows=scale,
-                    context_len=context_len,
-                    horizon=horizon,
-                )
-                res_df["model"] = name
-                res_df["scale"] = scale
-                all_summaries.append(res_df)
-                all_step_errors[scale][name] = step_errors
-                if verbose:
-                    print(f"  \u2713 {name}")
-            except Exception as e:                      # keep one failure local
-                if verbose:
-                    print(f"  \u2717 {name}: {e}")
+            res_df, step_errors = run_test(
+                df, wrapper,
+                num_windows=scale,
+                context_len=context_len,
+                horizon=horizon,
+            )
+            res_df["model"] = name
+            res_df["scale"] = scale
+            all_summaries.append(res_df)
+            all_step_errors[scale][name] = step_errors
+            if verbose:
+                print(f"  \u2713 {name}")
 
     summary = pd.concat(all_summaries, ignore_index=True)
     return summary, all_step_errors

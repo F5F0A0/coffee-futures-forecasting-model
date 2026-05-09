@@ -18,7 +18,7 @@ from .config import CONTEXT_LEN, FIG_DIR, HORIZON
 
 
 def _style(ax: plt.Axes, alpha: float = 0.15) -> None:
-    """Consistent spine / grid styling used across the paper."""
+    """Consistent spine / grid styling used across project figures."""
     ax.grid(True, alpha=alpha)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -56,9 +56,8 @@ def plot_forecast_origin_coverage(
     """
     2x2 grid showing where the forecast origins sit for each scale.
 
-    Visualizing this is important for readers of the paper: it makes
-    clear that the 60-origin run spans 30+ years of regime shifts,
-    not just the tail.
+    Visualizing this matters: it makes clear that the 60-origin run
+    spans 30+ years of regime shifts, not just the tail.
     """
     n = len(scales)
     nrows = (n + 1) // 2

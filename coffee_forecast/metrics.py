@@ -3,7 +3,7 @@ Point-forecast accuracy metrics.
 
 All five metrics are computed for every (model, origin) pair in the
 backtest. Keeping them in one function guarantees identical formulas
-across every table and figure in the paper.
+everywhere they're reported.
 """
 from __future__ import annotations
 
@@ -37,10 +37,18 @@ def calculate_metrics(
 
     Notes
     -----
-    MASE here uses the in-sample naive-forecast scale
-    ``mean(|y_t - y_{t-1}|)`` on the training window. A MASE of 1.0 means
-    the model matches a one-step naive forecast; anything >1 is losing to
-    the naive baseline in scale-free terms.
+    MASE uses Hyndman's in-sample naive-forecast scale
+    ``mean(|y_t - y_{t-1}|)`` on the training window. Lower is better, and
+    values are comparable across models forecasting the same series at the
+    same horizon.
+
+    The ``MASE = 1.0`` interpretation as "matches a naive forecast" only
+    holds for one-step forecasts on a stationary series. For multi-step
+    forecasts on volatile holdouts (here ``HORIZON = 63`` over a series
+    that includes the 2025 surge), MASE >> 1 is expected even for the
+    naive baseline: errors compound across the horizon and test-window
+    volatility may exceed the in-sample volatility used to set the scale.
+    Cross-model comparison is unaffected.
     """
     y_true  = np.asarray(y_true,  dtype=float)
     y_hat   = np.asarray(y_hat,   dtype=float)

@@ -31,7 +31,7 @@ SCALES      = [1, 10, 30, 60]  # evenly-spaced forecast origins
 SEED = 42
 
 # ---------------------------------------------------------------------------
-# Plotting: colors are consistent across every figure in the paper.
+# Plotting: colors are consistent across every figure in the project.
 # ---------------------------------------------------------------------------
 COLOR_MAP = {
     "Actual":      "#111111",
