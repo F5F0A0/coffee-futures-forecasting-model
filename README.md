@@ -2,7 +2,8 @@
 
 A **GJR-GARCH(1,1)-t** model that produces a 63-business-day price forecast for
 ICE Coffee C futures with 80% and 95% prediction intervals.
-Updates daily at 21:00 UTC (weekdays).
+Updates daily at 23:00 UTC (weekdays) &mdash; comfortably after ICE Coffee C
+settlement and Yahoo Finance's data refresh.
 
 ![Latest forecast](forecasts/latest_forecast.png)
 
@@ -15,11 +16,43 @@ Past runs: [`forecasts/archive/`](forecasts/archive/)
 This repository is both:
 
 - a **live deployment** of the GJR-GARCH forecasting model above, and
-- a **reproducible research benchmark** backing the paper
-  *"Forecasting Coffee Futures: A Benchmark of Simple and Foundation Models on
-  a Near-Random Series."* The benchmark compares ten models across five
-  categories over 32 years of daily prices (1994&ndash;2026) and motivates
-  the choice of a volatility model for deployment.
+- a **reproducible research benchmark** that compares ten forecasting
+  models across five categories over 32 years of daily prices
+  (1994&ndash;2026) and motivates the choice of a volatility model for
+  deployment.
+
+Browse the notebooks below for the analysis; see [Setup](#setup) if you
+want to reproduce locally.
+
+## Notebooks
+
+The `notebooks/` folder is the main read-through &mdash; the analysis
+unfolds across four notebooks in order. Each renders directly on
+GitHub, and static PDF copies live in
+[`notebooks/pdf/`](notebooks/pdf/) for offline reading.
+
+1. [`01_backtest_run.ipynb`](notebooks/01_backtest_run.ipynb) &mdash;
+   Load data, assemble the 10-model suite, run a single-window first
+   test, then the rolling-window backtest at 4 scales (1, 10, 30, 60
+   origins), export CSVs, and visualize the results: MAE stabilization
+   across scales, the 60-origin distribution, and a per-origin deep
+   dive (IBM Granite TTM vs. RWD).
+2. [`02_backtest_stats.ipynb`](notebooks/02_backtest_stats.ipynb) &mdash;
+   Diebold-Mariano and Model Confidence Set applied to the 60-origin
+   benchmark output, establishing that nine of ten models are jointly
+   indistinguishable at $\alpha = 0.10$.
+3. [`03_forecastability.ipynb`](notebooks/03_forecastability.ipynb) &mdash;
+   A priori forecastability diagnostics: unit-root tests (ADF, KPSS,
+   Phillips-Perron), return autocorrelation (Ljung-Box), Lo-MacKinlay
+   variance ratio, Hurst + Lo's modified R/S, plus exploratory metrics
+   (Spectral Predictability, Permutation Entropy, Lyapunov with
+   surrogate-data null). Explains *why* simple baselines aren't beaten
+   on this series.
+4. [`04_deployment_garch.ipynb`](notebooks/04_deployment_garch.ipynb)
+   &mdash; Validates GJR-GARCH(1,1)-t as the live-deployment model
+   (drift test, distribution fit, ARCH test, model comparison,
+   expanding-window coverage check) and produces a reproducible
+   sample forecast at `results/figures/garch_sample_forecast.png`.
 
 ## Repo layout
 
@@ -111,30 +144,20 @@ python scripts/run_forecast.py
 
 It loads the committed history, appends any newer Coffee C futures closes
 from Yahoo Finance (`KC=F`), fits GJR-GARCH(1,1)-t on log-returns, and
-writes a 63-day forecast to `forecasts/latest_forecast.csv` and
-`forecasts/latest_forecast.png`. The same script is what regenerates the
-image at the top of this README on its daily schedule.
+writes:
 
-## Notebook order
+- `forecasts/latest_forecast.csv` and `forecasts/latest_forecast.png` &mdash;
+  the most recent forecast, overwritten on every run
+- `forecasts/archive/{YYYY}/{MM}/{run_date}.csv` &mdash; a permanent
+  per-run snapshot, organized year/month so the archive stays
+  navigable as it grows
 
-1. `01_backtest_run.ipynb` &mdash; Load data, assemble the 10-model suite,
-   run a single-window first test, then the rolling-window backtest at
-   4 scales (1, 10, 30, 60 origins), export CSVs, and visualize the
-   results: MAE stabilization across scales, the 60-origin
-   distribution, and a per-origin deep dive (Granite TTM vs. RWD).
-2. `02_backtest_stats.ipynb` &mdash; Diebold-Mariano and Model Confidence
-   Set applied to the 60-origin benchmark output, establishing that nine
-   of ten models are jointly indistinguishable at $\alpha = 0.10$.
-3. `03_forecastability.ipynb` &mdash; A priori forecastability diagnostics:
-   unit-root tests (ADF, KPSS, Phillips-Perron), Spectral Predictability,
-   Permutation Entropy, Hurst + Lo's modified R/S, Lo-MacKinlay variance
-   ratio, and the largest Lyapunov exponent. Explains *why* simple
-   baselines aren't beaten on this series.
-4. `04_deployment_garch.ipynb` &mdash; Validates GJR-GARCH(1,1)-t as the
-   live-deployment model (drift test, distribution fit, ARCH test, model
-   comparison, expanding-window coverage check) and produces the live
-   forecast CSV + PNG in `forecasts/`.
+The same script regenerates the image at the top of this README on its
+daily schedule. Notebook 04 produces a separate, reproducible *sample*
+forecast at `results/figures/garch_sample_forecast.png` &mdash;
+running that notebook never overwrites the live deployment files.
 
-## Citation
+## License
 
-If you use this code, please cite the accompanying paper.
+Released under the MIT License &mdash; see [LICENSE](LICENSE).
+
