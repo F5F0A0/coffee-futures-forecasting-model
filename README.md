@@ -21,9 +21,6 @@ This repository is both:
   (1994&ndash;2026) and motivates the choice of a volatility model for
   deployment.
 
-Browse the notebooks below for the analysis; see [Setup](#setup) if you
-want to reproduce locally.
-
 ## Notebooks
 
 The `notebooks/` folder is the main read-through &mdash; the analysis
@@ -113,26 +110,13 @@ pip install -e .                 # installs the coffee_forecast package
 The editable install lets notebooks write `from coffee_forecast import ...`
 without any `sys.path` hacks.
 
-## Running the benchmark
+## Reproducing the benchmark
 
-From a notebook:
-
-```python
-from coffee_forecast import load_coffee_data, run_multi_scale_backtest
-
-df = load_coffee_data()
-summary, step_errors = run_multi_scale_backtest(df, models, scales=[1, 10, 30, 60])
-```
-
-or from the command line:
-
-```bash
-python scripts/run_backtest.py
-```
-
-Both produce `results/csv/summary_all_scales.csv` and
-`results/csv/step_errors_all_scales.csv`, which feed every downstream
-notebook.
+Run [`01_backtest_run.ipynb`](notebooks/01_backtest_run.ipynb)
+end-to-end. A CLI equivalent at `scripts/run_backtest.py` exists for
+non-Jupyter workflows; it produces the same
+`results/csv/summary_all_scales.csv` and
+`results/csv/step_errors_all_scales.csv` outputs the notebook does.
 
 ## Running the live forecast
 
