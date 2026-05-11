@@ -13,7 +13,7 @@
 
 \graphicspath{{../results/figures/}{../forecasts/}}
 
-\title{Forecasting ICE Coffee~C Futures: A Ten-Model Benchmark, Tests of the Random-Walk Hypothesis, and a Deployed GJR-GARCH Volatility Model}
+\title{Forecasting ICE Coffee~C Futures: A Ten-Model Benchmark, Tests of the Random-Walk Hypothesis, and a GJR-GARCH Prediction-Interval Model}
 
 \author{
 \IEEEauthorblockN{Bridget Brinkman, Faith Morrissey, Yun-Chih (Rick) Wu, Stella McElwain, Farah Hendawy}
@@ -35,20 +35,22 @@ the lowest mean absolute error (MAE). The Hansen-Lunde-Nason Model
 Confidence Set retains nine of ten models at $\alpha = 0.10$,
 eliminating only Prophet; pairwise Diebold-Mariano tests reach the
 same joint conclusion once corrected for multiple comparisons. To
-explain this tie, we run an a~priori forecastability battery on the
+explain this tie, we run a model-free forecastability battery on the
 same series: stationarity tests (ADF, KPSS, Phillips-Perron),
 return autocorrelation (Ljung-Box), the heteroskedasticity-robust
 Lo-MacKinlay variance ratio, the Hurst exponent under Lo's modified
 R/S, spectral predictability, permutation entropy, and the Rosenstein
-Lyapunov exponent with a shuffled-return surrogate null. All
-diagnostics agree the series is consistent with a near-random walk.
+Lyapunov exponent with a shuffled-return surrogate null. The
+diagnostics agree the series carries no exploitable structure at this
+horizon, consistent with a random walk.
 Because mean-only models are statistically indistinguishable, we
 select the deployment model on the basis of \emph{prediction
 intervals}: a GJR-GARCH(1{,}1)-t specification with constant mean and
 Student-$t$ innovations, justified by AIC/BIC, residual diagnostics,
 and an expanding-window coverage check at 60 historical origins, in
-which empirical 80\% and 95\% intervals meet or slightly exceed
-nominal across the full horizon.
+which the empirical 95\% interval meets or slightly exceeds nominal
+across the full horizon and the 80\% interval undercovers modestly
+in the first month before recovering to nominal.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -90,12 +92,12 @@ conclusion. A pre-trained foundation model with a six-year context
 window does not beat a constant-drift extrapolator on point accuracy
 across the 60-origin evaluation.
 
-\emph{The second part is an a~priori forecastability post-mortem.}
+\emph{The second part is a forecastability post-mortem.}
 The tie raises a natural question: is this an artifact of the model
 suite---a different class of models might extract structure ours
 misses---or does the series itself carry little exploitable
-structure? We answer with a battery of diagnostics applied to the
-series alone, independent of any forecasting model. We give primary
+structure? We answer with a battery of model-free diagnostics applied
+to the series alone, independent of any forecasting model. We give primary
 weight to the standard finance-econometrics battery laid out in the
 Tsay \cite{tsay2010analysis} framework---ADF
 \cite{dickey1979distribution}, KPSS \cite{kwiatkowski1992testing},
@@ -122,20 +124,9 @@ fit a GJR-GARCH(1{,}1) model with constant mean and Student-$t$
 innovations \cite{bollerslev1986generalized,glosten1993relation},
 justify each specification choice with a statistical test, and
 validate the resulting intervals through an expanding-window
-backtest in which empirical 80\% and 95\% coverage meet or slightly
-exceed nominal across the full 63-day horizon.
-
-The remainder of the paper is organized as follows.
-Section~\ref{sec:client} describes the project's client context.
-Section~\ref{sec:data} introduces the dataset.
-Section~\ref{sec:suite} defines the forecasting suite and the
-backtest design. Section~\ref{sec:backtest} reports the rolling-window
-backtest results. Section~\ref{sec:stat-tests} reports the DM and MCS
-statistical tests. Section~\ref{sec:forecastability} reports the
-a~priori forecastability diagnostics. Section~\ref{sec:garch}
-specifies and validates the GJR-GARCH(1{,}1)-t deployment model.
-Section~\ref{sec:deployment} sketches the live deployment pipeline.
-Section~\ref{sec:conclusion} concludes.
+backtest in which empirical 95\% coverage meets or slightly exceeds
+nominal across the full 63-day horizon and 80\% coverage undercovers
+modestly in the first month before recovering.
 
 % ===================================================================
 \section{Project Context: 19 Coffee Company}
@@ -232,9 +223,7 @@ foundation model. Within each category we selected a well-established
 representative rather than tuning across alternatives, so the
 benchmark tests whether any \emph{family} offers a systematic
 advantage over the others rather than whether a particular instance
-can be hyperparameter-optimized to win. Grouping the ten models into
-five categories also makes the methodological breadth easier to read
-than a flat ten-row list. All models share a
+can be hyperparameter-optimized to win. All models share a
 uniform interface: each is wrapped in a class exposing
 \verb|predict(context, horizon)| returning a point forecast at every
 step of the horizon. Stochastic components (RandomForest at
@@ -298,27 +287,48 @@ We use a rolling-window backtest with three design parameters:
     for green-coffee procurement and short enough that point
     forecasts remain defensible.
   \item \textbf{Origins}: 60 evenly-spaced forecast origins
-    distributed across the 32-year history. The choice of 60 emerged
-    from a small sweep (1, 10, 30, 60); the cluster-vs-outlier
-    structure of the leaderboard is stable from 30 to 60 origins,
-    and within-cluster rankings shuffle by one to three positions
-    while all cluster-mean MAE values remain within roughly
-    $0.3$ cents/lb of each other in both cases.
+    distributed across the 32-year history
+    (Fig.~\ref{fig:origins}). The choice of 60 emerged from a small
+    sweep (1, 10, 30, 60); Fig.~\ref{fig:mae-stab} shows the resulting
+    mean MAE for each model at each sweep size. The cluster-vs-outlier
+    structure of the leaderboard is stable from 30 to 60 origins, and
+    within-cluster rankings shuffle by one to three positions while
+    all cluster-mean MAE values remain within roughly $0.3$ cents/lb
+    of each other in both cases.
 \end{itemize}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{forecast_origin_coverage.png}
+  \caption{Backtest design at the four sweep sizes. Blue circles mark
+  forecast origins; orange segments mark the 63-day held-out horizon
+  following each. The 60-origin layout (bottom right) is the final
+  protocol; the lower sweep sizes are shown for comparison.}
+  \label{fig:origins}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{mae_stabilization.png}
+  \caption{Mean MAE by sweep size for all ten models. The nine
+  non-Prophet models cluster tightly from 10 origins onward and are
+  within roughly $1$ cent/lb of their 60-origin value by 30 origins.
+  Prophet remains an outlier at every sweep size.}
+  \label{fig:mae-stab}
+\end{figure}
 
 At each origin $a$, every model receives the same 1{,}536-day
 context $\{y_{a-1535},\dots,y_a\}$ and produces a 63-step forecast.
 We compute five forecast-error metrics per (origin, model):
 MAE, RMSE, MAPE, sMAPE, and MASE, the last following the
 scale-independent definition of Hyndman and Koehler
-\cite{hyndman2006another}. The resulting tables hold 1{,}010 rows
-(101 origins across the four scales $\times$ 10 models) at the
-summary level and 63{,}630 rows (origins $\times$ models $\times$
-horizon steps) at the per-step level. The per-step table is the
-input to the Diebold-Mariano test and the Model Confidence Set in
-Section~\ref{sec:stat-tests}. No model sees test data during
-fitting; every origin gets a fresh fit on the preceding 1{,}536
-days.
+\cite{hyndman2006another}. The 60-origin protocol yields 600 rows at
+the summary level (origins $\times$ models) and 37{,}800 rows at the
+per-step level (origins $\times$ models $\times$ horizon steps); the
+per-step table is the input to the Diebold-Mariano test and the
+Model Confidence Set in Section~\ref{sec:stat-tests}. No model sees
+test data during fitting; every origin gets a fresh fit on the
+preceding 1{,}536 days.
 
 % ===================================================================
 \section{Backtest Results}
@@ -328,15 +338,13 @@ days.
 \subsection{Qualitative preview: a single recent window}
 
 Before turning to the 60-origin evaluation, Fig.~\ref{fig:holdout}
-shows the 10-model overlay on the most recent 63-day window of the
-series, with the realized price path in black. Every model produces a
-visually plausible trajectory, and several track the realized path
-quite closely on this particular window---including Granite~TTM,
-which has the lowest MAE here. The figure is intended as a sanity
-check, not as evidence; the formal across-origin evaluation in
-Sections~\ref{sec:backtest}.B--D returns a very different ranking
-from what this single window suggests, and the disagreement is itself
-a useful warning about reading too much into any one window.
+shows the 10-model overlay on the most recent 63-day window with the
+realized price path in black. Every model produces a visually
+plausible trajectory, and several track the realized path closely on
+this particular window---including Granite~TTM, which has the lowest
+MAE here. The 60-origin evaluation that follows returns a very
+different ranking, which is itself a useful warning about reading too
+much into any single window.
 
 \begin{figure}[t]
   \centering
@@ -499,22 +507,17 @@ every category in the suite, including the foundation model.
 
 The two tests can look superficially contradictory: DM rejects equal
 accuracy between RWD and Granite (and Ridge) at the 5\% level, while
-MCS keeps both in the confidence set with $p = 1.000$. The gap is
-real and reflects what each test does. DM tests one pair at a time
-without multiple-comparisons correction; with nine pairwise tests
-against RWD the family-wise error rate inflates. A Bonferroni
-adjustment to the pairwise level---$\alpha / 9 \approx 0.006$ for an
-overall 5\% rate---would eliminate the marginal Granite-TTM and
-Ridge significances entirely and leave only Prophet rejected, which
-is the conclusion the MCS reaches by construction. MCS performs the
-joint test on the full set and corrects for multiple comparisons
-without requiring an explicit Bonferroni correction. With ten models
-the joint test is the appropriate primary tool; DM is a familiar
-pairwise summary that supplements rather than contradicts it.
+MCS keeps both in the confidence set with $p = 1.000$. The gap
+reflects multiple-comparisons correction. A Bonferroni adjustment to
+the nine pairwise DM tests---$\alpha/9 \approx 0.006$ for an overall
+5\% rate---would eliminate the marginal Granite-TTM and Ridge
+significances and leave only Prophet rejected, which is the
+conclusion the MCS reaches by construction. With ten models the joint
+test is the appropriate primary tool; DM is a familiar pairwise
+summary that supplements rather than contradicts it.
 
-A caveat on power. $T = 60$ origins is on the small side for MCS
-(the Hansen-Lunde-Nason simulations use $T = 100$--$500$). With
-$T = 60$ and ten models the test has limited power, so a
+A caveat on power: $T = 60$ origins is on the small side for MCS (the
+Hansen-Lunde-Nason simulations use $T = 100$--$500$), so a
 wider-than-true MCS is partly a power story. The qualitative
 finding---Prophet eliminated, the remaining nine retained---is
 robust, but the surviving set could plausibly shrink with more
@@ -543,12 +546,12 @@ therefore descriptive rather than a true ranking: RWD is not "the
 winner" but the arithmetic leader of a cluster of
 statistically-equivalent models, and the benchmark does not have
 enough resolving power to single one out. A diverse 10-model suite
-that includes a 32-year pretrained foundation model cannot
-statistically distinguish itself from a naive drift forecaster on
-this series.
+that includes a pretrained foundation model with a six-year context
+window cannot statistically distinguish itself from a naive drift
+forecaster on this series.
 
 % ===================================================================
-\section{A Priori Forecastability Diagnostics}
+\section{Forecastability Diagnostics}
 \label{sec:forecastability}
 % ===================================================================
 
@@ -557,26 +560,59 @@ wrong instrument and a different class of models would extract
 structure ours misses, or the series itself carries little
 exploitable structure at this horizon. We test the second reading
 directly with a battery of diagnostics applied to the series alone,
-independent of any forecasting model. The diagnostics split into a
-standard finance-econometrics battery
-(Sections~\ref{sec:stationarity}--\ref{sec:lr-hurst}) and three
-exploratory metrics drawn from the nonlinear-dynamics and
-signal-processing literatures
-(Section~\ref{sec:exploratory}).
+independent of any forecasting model. Table~\ref{tab:diagnostics}
+collects all results; the prose below groups them thematically. We
+give primary weight to the standard finance-econometrics battery
+(stationarity, linear predictability, long memory) and supplement it
+with three exploratory metrics from the nonlinear-dynamics and
+signal-processing literatures as an independent cross-check.
+
+\begin{table}[t]
+\caption{Forecastability diagnostics on coffee log-returns}
+\label{tab:diagnostics}
+\centering
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}p{0.30\linewidth}p{0.32\linewidth}p{0.28\linewidth}@{}}
+\toprule
+\textbf{Test} & \textbf{Null} & \textbf{Result} \\
+\midrule
+\multicolumn{3}{l}{\emph{Stationarity (on prices / on log-returns)}} \\
+ADF \cite{dickey1979distribution}            & Unit root           & $p = 0.557$ / $p < 10^{-90}$ \\
+KPSS \cite{kwiatkowski1992testing}           & Stationary          & $p < 0.01$ / $p > 0.10$ \\
+Phillips-Perron \cite{phillips1988testing}   & Unit root           & $p = 0.418$ / $p < 10^{-90}$ \\
+\midrule
+\multicolumn{3}{l}{\emph{Linear predictability of log-returns}} \\
+Ljung-Box ($L{=}10,20$) \cite{ljung1978measure}        & No autocorrelation  & $p \approx 0.006$; $\overline{|\hat\rho|} \approx 0.013$ \\
+Lo-MacKinlay VR ($q{=}2,\dots,32$) \cite{lo1988stock}  & Random walk         & Fail to reject at all $q$ \\
+\midrule
+\multicolumn{3}{l}{\emph{Long memory}} \\
+Hurst exponent \cite{hurst1951long}          & ---                 & $H = 0.535$ \\
+Lo's modified $V_n$ \cite{lo1991long}        & No long memory      & $V_n = 1.137 \in [0.809, 1.862]$ \\
+\midrule
+\multicolumn{3}{l}{\emph{Exploratory metrics on log-returns}} \\
+Spectral predictability $\Omega$ \cite{wang2025spectral}      & ---  & $\Omega \approx 0.05$ (near floor) \\
+Permutation entropy \cite{bandt2002permutation}               & ---  & $\approx 1.00$ (near ceiling) \\
+Rosenstein $\lambda$ vs.\ surrogate \cite{rosenstein1993practical,theiler1992testing}  & Shuffled-return null & $p = 0.97$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Stationarity}
 \label{sec:stationarity}
 
-Several of the diagnostics below (variance ratio, Hurst with R/S, the
-Lyapunov reconstruction) require a stationary input series.
+Several diagnostics (variance ratio, Hurst with R/S, the Lyapunov
+reconstruction) require a stationary input, and the GARCH deployment
+in Section~\ref{sec:garch} works in log-returns for the same reason.
 Fig.~\ref{fig:prices-vs-returns} shows the price level and its
-log-returns side by side. We confirm stationarity through three
-complementary unit-root tests: the Augmented Dickey-Fuller
-\cite{dickey1979distribution} (H$_0$: unit root); the KPSS
-\cite{kwiatkowski1992testing} test (H$_0$: stationary); and the
-Phillips-Perron \cite{phillips1988testing} test (H$_0$: unit root,
-non-parametric correction for serial correlation and
-heteroskedasticity).
+log-returns side by side. Three complementary unit-root tests agree:
+on prices, ADF and Phillips-Perron fail to reject the unit-root null
+while KPSS rejects stationarity; on log-returns the directions flip,
+with ADF and PP rejecting at $p < 10^{-90}$ and KPSS failing to
+reject. The confirmatory design---ADF and Phillips-Perron paired with
+the oppositely-directed KPSS---eliminates the standard "low-power
+ADF" critique, and the Phillips-Perron non-parametric correction is
+robust to the heteroskedasticity that Section~\ref{sec:garch}
+formally documents.
 
 \begin{figure}[t]
   \centering
@@ -590,141 +626,83 @@ heteroskedasticity).
   \label{fig:prices-vs-returns}
 \end{figure}
 
-All three tests agree. On prices, ADF fails to reject the unit-root
-null ($p = 0.557$), Phillips-Perron likewise fails to reject
-($p = 0.418$), and KPSS rejects stationarity ($p < 0.01$). On
-log-returns the directions flip: ADF and Phillips-Perron strongly
-reject the unit-root null ($p < 10^{-90}$), and KPSS fails to reject
-stationarity ($p > 0.10$). The confirmatory design---rejection by
-ADF and Phillips-Perron paired with non-rejection by the
-oppositely-directed KPSS test---eliminates the standard "low-power
-ADF" critique. The Phillips-Perron agreement is particularly
-valuable here because its non-parametric correction is robust to the
-heteroskedasticity that Section~\ref{sec:garch} formally documents.
+\subsection{Linear predictability of returns}
+\label{sec:linear-pred}
 
-\subsection{Return autocorrelation}
-\label{sec:ljungbox}
-
-Under the weak form of market efficiency, daily returns should not
-be linearly predictable from their own past. The Ljung-Box test
-\cite{ljung1978measure} checks the joint null that all
-autocorrelations up to lag $L$ are zero. With $T = 8{,}103$
-log-returns and $L \in \{10, 20\}$, both windows formally reject
-($p \approx 0.006$ at both lag choices). The magnitudes underneath
-this rejection are tiny: the mean of $|\hat\rho(k)|$ over lags 1--20
-is approximately $0.013$, with a maximum of $0.040$. This is the
-textbook stylized fact for liquid financial returns
-\cite{cont2001empirical}: linear return autocorrelations are
-statistically non-zero at very large $T$ but economically negligible,
+Under the weak form of market efficiency, daily returns should not be
+linearly predictable from their own past. Two complementary tests
+address this. Ljung-Box at $L \in \{10, 20\}$ formally rejects the
+joint no-autocorrelation null ($p \approx 0.006$ at both lags), but
+the underlying autocorrelations are economically negligible: the
+mean of $|\hat\rho(k)|$ over lags 1--20 is approximately $0.013$,
+with a maximum of $0.040$. This is the textbook stylized fact for
+liquid financial returns \cite{cont2001empirical}: linear return
+autocorrelations are statistically non-zero at very large $T$ but
 too small to exploit through point-forecast models. The
-heteroskedasticity-robust variance-ratio test in
-Section~\ref{sec:vr} provides a complementary direct test of the
-random-walk hypothesis with results that align with this practical
-reading.
-
-\subsection{Lo-MacKinlay variance ratio}
-\label{sec:vr}
-
-Under the random-walk null, the variance of $q$-period returns
-equals $q$ times the variance of one-period returns, so
-$\mathrm{VR}(q) = \mathrm{Var}(r_t^{(q)})/[q \cdot \mathrm{Var}(r_t)]$
-equals 1 at every horizon. Deviations are direct evidence against
-the random-walk hypothesis. We use the heteroskedasticity-robust
-$z$-statistic of Lo and MacKinlay \cite{lo1988stock}, which handles
-the volatility clustering coffee returns exhibit. Across
+heteroskedasticity-robust Lo-MacKinlay variance ratio
+\cite{lo1988stock} provides a direct test of the random-walk
+hypothesis robust to volatility clustering: across
 $q \in \{2, 4, 8, 16, 32\}$, $\mathrm{VR}(q)$ stays within rounding
 distance of 1 (from $0.986$ at $q=2$ to $0.852$ at $q=32$) and no
-$z$-statistic reaches conventional significance. We fail to reject
-the random-walk null at every tested horizon. This is the strongest
-direct evidence in the a~priori battery that the series is consistent
-with a random walk.
+$z$-statistic reaches conventional significance. The variance ratio
+fails to reject the random-walk null at every tested horizon---the
+strongest direct evidence in the battery that the series is
+consistent with a random walk.
 
-\subsection{Hurst exponent with Lo's modified R/S}
+\subsection{Long memory}
 \label{sec:lr-hurst}
 
 The Hurst exponent $H$ is estimated from the log-log slope of the
-rescaled range,
-$\mathbb{E}[(R/S)_n] \sim c \cdot n^H$ \cite{hurst1951long}. $H = 0.5$
-corresponds to no exploitable memory; $H > 0.5$ to long-range
-persistence and $H < 0.5$ to mean reversion. Classical $H$ is biased
-upward by short-range autocorrelation, so we also compute Lo's
-modified R/S statistic $V_n$ \cite{lo1991long}, which applies a
-Bartlett-kernel HAC adjustment. Under the long-memory null,
-$V_n \in [0.809, 1.862]$ at the 95\% level. We compute both on
-log-returns, the standard representation for $R/S$ analysis, and use
-the rule-of-thumb truncation lag $q = \lfloor T^{1/3} \rfloor$
-($q = 20$ at $T = 8{,}103$) as an alternative to the data-driven
-Andrews (1991) bandwidth \cite{andrews1991heteroskedasticity}; $V_n$
-sits comfortably inside the acceptance region under both choices.
+rescaled range, $\mathbb{E}[(R/S)_n] \sim c \cdot n^H$
+\cite{hurst1951long}; $H = 0.5$ corresponds to no exploitable memory.
+Classical $H$ is biased upward by short-range autocorrelation, so we
+also compute Lo's modified R/S statistic $V_n$ \cite{lo1991long},
+which applies a Bartlett-kernel HAC adjustment and has 95\%
+acceptance region $V_n \in [0.809, 1.862]$ under the long-memory
+null. We use the rule-of-thumb truncation lag
+$q = \lfloor T^{1/3} \rfloor$ ($q = 20$ at $T = 8{,}103$) as an
+alternative to the Andrews bandwidth
+\cite{andrews1991heteroskedasticity}, with $V_n$ inside the
+acceptance region under both choices. We find $H = 0.535$ and
+$V_n = 1.137$: the Hurst estimate sits just above the random-walk
+value, but the modified $V_n$ does not reject the no-long-memory
+null. The $0.035$ excess of $H$ above $0.5$ is plausibly explained
+by the small short-range autocorrelations of
+Section~\ref{sec:linear-pred}, which classical $H$ is known to
+absorb.
 
-We find $H = 0.535$ and $V_n = 1.137$. The Hurst estimate sits just
-above the random-walk value, but Lo's modified $V_n$ lies inside the
-95\% acceptance region: we fail to reject the no-long-memory null.
-The Hurst-estimate excess of $0.035$ above $0.5$ is plausibly
-explained by the small short-range autocorrelations documented in
-Section~\ref{sec:ljungbox}, which classical $H$ is known to absorb.
-Fig.~\ref{fig:hurst} shows the underlying R/S log-log plot.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{hurst_rs.png}
-  \caption{Rescaled-range analysis of coffee log-returns. Empirical
-  $(R/S)_n$ values (blue circles) and OLS log-log fit (orange dashed)
-  yield $H = 0.535$. The gray dotted reference line is the
-  random-walk slope $H = 0.5$. Lo's modified $V_n = 1.137$ lies
-  inside the 95\% acceptance region $[0.809, 1.862]$, so the
-  no-long-memory null is not rejected.}
-  \label{fig:hurst}
-\end{figure}
-
-\subsection{Exploratory metrics}
+\subsection{Exploratory cross-checks}
 \label{sec:exploratory}
 
 To check the standard-battery conclusion from independent angles, we
 also computed three metrics from the nonlinear-dynamics and
-signal-processing literatures: spectral predictability $\Omega$
-\cite{wang2025spectral}, Bandt-Pompe permutation entropy
-\cite{bandt2002permutation}, and the Rosenstein largest-Lyapunov
-estimator \cite{rosenstein1993practical} validated with a
-shuffled-return surrogate-data null \cite{theiler1992testing}. All
-three converge with the standard battery: spectral mass on log-returns
-sits at the white-noise floor ($\Omega \approx 0.05$, against $0.68$
-on price levels, where the apparent ``structure'' is the I(1) drift
-signature rather than exploitable periodicity); permutation entropy
-sits near the maximum-randomness ceiling on both representations
-($0.97$ on prices, $\approx 1.00$ on log-returns); and the raw
-Lyapunov estimate ($\lambda = +0.071$) is indistinguishable from the
-shuffled-return surrogate distribution (one-sided $p = 0.97$),
-consistent with finite-sample bias of the Rosenstein algorithm on
-stochastic data rather than with deterministic chaos. Implementation
-details, the multi-frequency robustness check, and a discrete-length
-adaptation of $\Omega$ that replaces the original $\log(2\pi)$
-denominator with $\log N_\mathrm{freq}$ to keep the metric in
-$[0, 1]$ at long series, are available in the project repository
-\cite{brinkman2026repo}.
+signal-processing literatures. All three converge with the standard
+battery. Spectral mass on log-returns sits at the white-noise floor
+($\Omega \approx 0.05$, against $0.68$ on price levels, where the
+apparent ``structure'' is the I(1) drift signature rather than
+exploitable periodicity). Permutation entropy sits near the
+maximum-randomness ceiling on both representations ($0.97$ on prices,
+$\approx 1.00$ on log-returns). The raw Lyapunov estimate
+($\lambda = +0.071$) is indistinguishable from the shuffled-return
+surrogate distribution (one-sided $p = 0.97$), consistent with
+finite-sample bias of the Rosenstein algorithm on stochastic data
+rather than with deterministic chaos. Implementation details, the
+multi-frequency robustness check, and a discrete-length adaptation
+of $\Omega$ that replaces the original $\log(2\pi)$ denominator with
+$\log N_\mathrm{freq}$ to keep the metric in $[0, 1]$ at long series
+are available in the project repository \cite{brinkman2026repo}.
 
 \subsection{Synthesis}
 
-The diagnostics agree. ADF and Phillips-Perron fail to reject the
-unit-root null on prices and strongly reject it on log-returns;
-KPSS, with the reversed null, agrees. Ljung-Box rejects formally on
-returns but the underlying autocorrelations are on the order of
-$10^{-2}$, economically negligible. The heteroskedasticity-robust
-Lo-MacKinlay variance ratio fails to reject the random-walk null at
-horizons from 2 to 32 days. The Hurst estimate is $0.535$ but Lo's
-modified $V_n$ does not reject the no-long-memory null. Spectral
-energy on log-returns is near the white-noise floor. Permutation
-entropy is near the ceiling on both representations. The raw
-Lyapunov exponent is consistent with what shuffled returns produce.
-
-The empirical signature is consistent with weak-form market
-efficiency \cite{fama1970efficient}: past prices alone do not contain
-information about future prices that simple baselines and complex
-models alike could extract on this series. The a~priori prior is
-that any model in this class should be roughly competitive with a
-random-walk baseline; the benchmark in
+Every diagnostic in Table~\ref{tab:diagnostics} points the same way:
+the series carries no exploitable structure at this horizon that
+simple baselines and complex models alike could extract, which is the
+empirical signature of weak-form market efficiency
+\cite{fama1970efficient} and is consistent with a random walk. The
+prediction is therefore that any model in this class should be
+roughly competitive with a random-walk baseline; the benchmark in
 Sections~\ref{sec:backtest}--\ref{sec:stat-tests} confirmed that
-prior.
+prediction.
 
 % ===================================================================
 \section{Volatility Model for Prediction Intervals}
@@ -744,33 +722,30 @@ financial-return modeling \cite{tsay2010analysis}. Each modeling
 choice below is justified by a test on the same dataset; the section
 walks through each in turn.
 
-\subsection{Mean specification}
+\subsection{Specification choices: mean, distribution, ARCH effects}
 
-A HAC-robust regression of log-returns on a constant returns a daily
-mean of $+1.88 \times 10^{-4}$ with Newey-West standard error
-$2.55 \times 10^{-4}$ (10 lags), $t = +0.74$, $p = 0.46$. The drift
-is not statistically distinguishable from zero. We adopt a
-constant-mean specification.
+\emph{Mean.} A HAC-robust regression of log-returns on a constant
+returns a daily mean of $+1.88 \times 10^{-4}$ with Newey-West
+standard error $2.55 \times 10^{-4}$ (10 lags), $t = +0.74$,
+$p = 0.46$. The drift is not statistically distinguishable from
+zero, so we adopt a constant-mean specification.
 
-\subsection{Innovation distribution}
+\emph{Innovation distribution.} Daily log-returns have sample
+skewness $+0.19$ and excess kurtosis $+6.65$. Jarque-Bera
+\cite{jarque1980efficient} rejects normality at the limit of
+numerical precision ($JB = 1.5 \times 10^4$, $p < 10^{-300}$). A
+maximum-likelihood fit of the Student-$t$ distribution to the raw
+returns yields $\nu \approx 4.2$, indicating substantially heavier
+tails than Normal. We use Student-$t$ innovations.
 
-Daily log-returns have sample skewness $+0.19$ and excess kurtosis
-$+6.65$. Jarque-Bera \cite{jarque1980efficient} rejects normality at
-the limit of numerical precision ($JB = 1.5 \times 10^4$,
-$p < 10^{-300}$). A maximum-likelihood fit of the Student-$t$
-distribution to the raw returns yields $\nu \approx 4.2$, indicating
-substantially heavier tails than Normal. We use Student-$t$
-innovations.
-
-\subsection{ARCH versus IID}
-
-Engle's ARCH LM test \cite{engle1982autoregressive} with 10 lags
-yields $LM = 523.2$, $p \approx 5 \times 10^{-106}$. The null of no
-conditional heteroskedasticity is rejected at any reasonable
-significance level. Fig.~\ref{fig:acf} contrasts the ACF of returns
-with the ACF of squared returns: returns are nearly white noise,
-while squared returns are persistently autocorrelated out to dozens
-of lags---volatility clustering, the empirical pattern GARCH is
+\emph{ARCH effects.} Engle's ARCH LM test
+\cite{engle1982autoregressive} with 10 lags yields $LM = 523.2$,
+$p \approx 5 \times 10^{-106}$: the null of no conditional
+heteroskedasticity is rejected at any reasonable significance level.
+Fig.~\ref{fig:acf} contrasts the ACF of returns with the ACF of
+squared returns: returns are nearly white noise, while squared
+returns are persistently autocorrelated out to dozens of
+lags---volatility clustering, the empirical pattern GARCH is
 designed to capture.
 
 \begin{figure}[t]
@@ -889,16 +864,23 @@ at each step.
   \caption{Empirical coverage of GJR-GARCH(1{,}1)-t prediction
   intervals across 60 expanding-window origins, by horizon step.
   Solid lines: observed coverage; dashed: nominal 80\% and 95\%
-  targets. Both intervals meet or slightly exceed nominal across
-  the full 63-day horizon.}
+  targets. The 95\% interval is at or above nominal across the full
+  horizon; the 80\% interval undercovers by 2--10 percentage points
+  through the first month and recovers to meet or exceed nominal
+  thereafter.}
   \label{fig:garch-cov}
 \end{figure}
 
-Fig.~\ref{fig:garch-cov} shows the result. Empirical 80\% and 95\%
-coverage track their nominal targets across the full horizon, both
-sitting at or slightly above the dashed reference lines. The
-intervals are mildly conservative rather than under-covering, which
-is the safe direction for a deployment forecast.
+Fig.~\ref{fig:garch-cov} shows the result. The 95\% interval meets
+or slightly exceeds nominal across the full 63-day horizon---safely
+conservative, the direction a deployment forecast wants to err. The
+80\% interval is less uniform: it sits around 73--78\% through the
+first month, with a minimum near 70\% at horizon 14, before rising
+to meet or exceed 80\% from roughly horizon 45 onward. The pattern
+is consistent with the model's short-horizon variance being slightly
+under-dispersed; the practical consequence for a procurement reader
+is that the 80\% band over the first month is closer to a
+\textit{75\% band}, while the 95\% band is reliable throughout.
 
 Fig.~\ref{fig:garch-samples} provides a qualitative complement: six
 origins drawn from the 60, each showing the realized path against the
@@ -918,10 +900,10 @@ episode (Origin~26) and the 2024--2025 rally (Origin~59).
   \label{fig:garch-samples}
 \end{figure*}
 
-\subsection{Summary}
+\subsection{Summary and scope of the specification search}
 
-Table~\ref{tab:garch-decisions} collects the specification choices and
-the test that justifies each.
+Table~\ref{tab:garch-decisions} collects the specification choices
+and the test that justifies each.
 
 \begin{table}[t]
 \caption{GJR-GARCH(1{,}1)-t specification choices}
@@ -938,12 +920,10 @@ Student-$t$, not Normal          & Excess kurtosis $6.65$; Jarque-Bera \\
 GARCH family over IID            & ARCH LM, $p \approx 5 \times 10^{-106}$ \\
 GJR over plain GARCH             & AIC, BIC, squared-residual LB \\
 Expanding-window fits            & Stabilizes $\nu$; calibrated coverage \\
-80\% / 95\% PIs                  & Empirical coverage at or above nominal \\
+80\% / 95\% PIs                  & 95\% at/above nominal; 80\% near 75\% early, recovers later \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Scope of the specification search}
 
 GJR-GARCH(1{,}1)-t is presented here as an \emph{informed} choice
 within the broader GARCH family rather than the optimum of an
@@ -1005,11 +985,11 @@ prices. The 60-origin rolling-window backtest, the Diebold-Mariano
 test against a random-walk baseline, and the Hansen-Lunde-Nason
 Model Confidence Set all converge on the same finding: nine of the
 ten models are jointly indistinguishable in terms of point-forecast
-accuracy at $\alpha = 0.10$, including a foundation model with a
-32-year pretrained backbone. Only Prophet falls outside the
+accuracy at $\alpha = 0.10$, including a pretrained foundation model
+fed a six-year context window. Only Prophet falls outside the
 confidence set.
 
-The a~priori forecastability battery explains why. ADF, KPSS, and
+The model-free forecastability battery explains why. ADF, KPSS, and
 Phillips-Perron place the series on a unit root; the
 heteroskedasticity-robust Lo-MacKinlay variance ratio fails to
 reject the random-walk null at every tested horizon; the Hurst
@@ -1018,7 +998,9 @@ reject no-long-memory; spectral predictability on log-returns is
 near the white-noise floor; permutation entropy is near the ceiling
 on both representations; and the raw Lyapunov exponent is
 statistically indistinguishable from that of shuffled returns. The
-empirical signature is consistent with weak-form market efficiency.
+collective signature is one of no exploitable structure at this
+horizon---consistent with weak-form market efficiency, and with a
+random walk as the simplest model that fits.
 
 Because the benchmark's point-forecast accuracies are
 indistinguishable, the deployment model is chosen on the basis of
@@ -1026,9 +1008,10 @@ prediction intervals. A GJR-GARCH(1{,}1)-t model with constant mean
 and Student-$t$ innovations is justified specification-by-specification
 through HAC-robust drift tests, the ARCH LM test, AIC/BIC comparisons
 against plain GARCH, and Ljung-Box on squared standardized residuals.
-An expanding-window backtest at 60 historical origins confirms
-calibrated empirical coverage at the nominal 80\% and 95\% levels
-across the full 63-day horizon. The deployed system produces a daily
+An expanding-window backtest at 60 historical origins confirms 95\%
+empirical coverage at or above nominal across the full 63-day
+horizon, with 80\% coverage approaching nominal by mid-horizon after
+modest undercoverage in the first month. The deployed system produces a daily
 forward distribution that is appropriate for the procurement use-case
 that motivated the project.
 
