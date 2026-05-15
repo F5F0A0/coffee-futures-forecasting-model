@@ -1,6 +1,6 @@
 # Coffee Futures Forecasting Model
 
-A **GJR-GARCH(1,1)-t** model that produces a 63-business-day price forecast for
+A **GARCH(1,1)-t** model that produces a 63-business-day price forecast for
 ICE Coffee C futures with 80% and 95% prediction intervals.
 Updates daily at 23:00 UTC (weekdays) &mdash; comfortably after ICE Coffee C
 settlement and Yahoo Finance's data refresh.
@@ -15,7 +15,7 @@ Past runs: [`forecasts/archive/`](forecasts/archive/)
 
 This repository is both:
 
-- a **live deployment** of the GJR-GARCH forecasting model above, and
+- a **live deployment** of the GARCH forecasting model above, and
 - a **reproducible research benchmark** that compares ten forecasting
   models across five categories over 32 years of daily prices
   (1994&ndash;2026) and motivates the choice of a volatility model for
@@ -24,9 +24,9 @@ This repository is both:
 ## Notebooks
 
 The `notebooks/` folder is the main read-through &mdash; the analysis
-unfolds across four notebooks in order. Each renders directly on
-GitHub, and static PDF copies live in
-[`notebooks/pdf/`](notebooks/pdf/) for offline reading.
+unfolds across six notebooks. Each renders directly on GitHub, and
+static PDF copies live in [`notebooks/pdf/`](notebooks/pdf/) for
+offline reading.
 
 1. [`01_backtest_run.ipynb`](notebooks/01_backtest_run.ipynb) &mdash;
    Load data, assemble the 10-model suite, run a single-window first
@@ -38,18 +38,32 @@ GitHub, and static PDF copies live in
    Diebold-Mariano and Model Confidence Set applied to the 60-origin
    benchmark output, establishing that nine of ten models are jointly
    indistinguishable at $\alpha = 0.10$.
-3. [`03_forecastability.ipynb`](notebooks/03_forecastability.ipynb) &mdash;
-   A priori forecastability diagnostics: unit-root tests (ADF, KPSS,
-   Phillips-Perron), return autocorrelation (Ljung-Box), Lo-MacKinlay
-   variance ratio, Hurst + Lo's modified R/S, plus exploratory metrics
-   (Spectral Predictability, Permutation Entropy, Lyapunov with
-   surrogate-data null). Explains *why* simple baselines aren't beaten
+3. [`03_stationarity_diagnostics.ipynb`](notebooks/03_stationarity_diagnostics.ipynb)
+   &mdash; The standard finance-econometrics battery for weak-form
+   market efficiency: ADF / KPSS / Phillips-Perron unit-root tests,
+   Ljung-Box on returns, and the Lo-MacKinlay heteroskedasticity-robust
+   variance-ratio test. Explains *why* simple baselines aren't beaten
    on this series.
+3b. [`03b_exploratory_dynamics.ipynb`](notebooks/03b_exploratory_dynamics.ipynb)
+   &mdash; Independent confirmations from the nonlinear-dynamics and
+   signal-processing literatures: Hurst + Lo's modified R/S, spectral
+   predictability $\Omega$, permutation entropy, and Rosenstein
+   Lyapunov with a surrogate-data null. Not load-bearing for the
+   weak-form-efficiency conclusion &mdash; the standard battery in
+   notebook 03 already settles that &mdash; but corroborates it from
+   different mathematical angles.
 4. [`04_deployment_garch.ipynb`](notebooks/04_deployment_garch.ipynb)
-   &mdash; Validates GJR-GARCH(1,1)-t as the live-deployment model
-   (drift test, distribution fit, ARCH test, model comparison,
-   expanding-window coverage check) and produces a reproducible
-   sample forecast at `results/figures/garch_sample_forecast.png`.
+   &mdash; Validates GARCH(1,1)-t as the live-deployment model
+   (drift test, distribution fit, ARCH test, residual diagnostics,
+   expanding-window coverage check at five nominal levels) and
+   produces a reproducible sample forecast at
+   `results/figures/garch_sample_forecast.png`.
+5. [`05_rolling_vs_expanding_audit.ipynb`](notebooks/05_rolling_vs_expanding_audit.ipynb)
+   &mdash; Methodology audit comparing rolling-window (fixed
+   1,536-day) and expanding-window training for the GARCH(1,1)-t
+   calibration backtest. The expanding-window pooled-coverage numbers
+   in this notebook are the source of the 5-level coverage results
+   reported in the paper's Table II.
 
 ## Repo layout
 
@@ -58,18 +72,20 @@ coffee-futures-forecasting-model/
 |-- coffee_forecast/         # Importable Python package
 |   |-- config.py            # Constants, paths, color map
 |   |-- data.py              # load_coffee_data
-|   |-- metrics.py           # calculate_metrics (MAE, RMSE, MAPE, sMAPE, MASE)
+|   |-- metrics.py           # calculate_metrics (MAE, RMSE, sMAPE)
 |   |-- models.py            # 5 wrapper classes with a shared predict() API
 |   |-- backtest.py          # get_forecast_origins, run_test, run_multi_scale_backtest
 |   |-- forecastability.py   # Spectral Omega, Permutation Entropy, Hurst + Lo's R/S
 |   |-- stats_tests.py       # Diebold-Mariano, Model Confidence Set
-|   |-- deployment.py        # GJR-GARCH forecast, Yahoo fetch, plotting
+|   |-- deployment.py        # GARCH forecast, Yahoo fetch, plotting
 |   `-- viz.py               # Reusable plotting helpers
 |-- notebooks/               # Ordered walk-through of the analysis
 |   |-- 01_backtest_run.ipynb
 |   |-- 02_backtest_stats.ipynb
-|   |-- 03_forecastability.ipynb
-|   `-- 04_deployment_garch.ipynb
+|   |-- 03_stationarity_diagnostics.ipynb
+|   |-- 03b_exploratory_dynamics.ipynb
+|   |-- 04_deployment_garch.ipynb
+|   `-- 05_rolling_vs_expanding_audit.ipynb
 |-- scripts/
 |   |-- run_backtest.py        # CLI equivalent of notebook 01
 |   |-- run_forecast.py        # Daily deployment runner (cron / GitHub Actions)
@@ -127,7 +143,7 @@ python scripts/run_forecast.py
 ```
 
 It loads the committed history, appends any newer Coffee C futures closes
-from Yahoo Finance (`KC=F`), fits GJR-GARCH(1,1)-t on log-returns, and
+from Yahoo Finance (`KC=F`), fits GARCH(1,1)-t on log-returns, and
 writes:
 
 - `forecasts/latest_forecast.csv` and `forecasts/latest_forecast.png` &mdash;

@@ -1,18 +1,16 @@
 """
-Live deployment: GJR-GARCH(1,1)-t forecast with calibrated prediction intervals.
+Live deployment: GARCH(1,1)-t forecast with calibrated prediction intervals.
 
-The research repo chooses GJR-GARCH(1,1) with standardized Student-t innovations
+The research repo chooses GARCH(1,1) with standardized Student-t innovations
 as the production model for daily-cadence price-path forecasts. The justification
 lives in ``notebooks/04_deployment_garch.ipynb``:
 
   - simple baselines win on *point* accuracy (notebook 02: MCS contains them all),
     but none of them produce prediction intervals;
   - log-returns exhibit strong volatility clustering (ARCH test, ACF^2), and
-    heavy tails (fitted nu ~ 5.6), which a normal GARCH cannot model;
-  - GJR adds an asymmetric-leverage term that improves AIC, BIC, and
-    Ljung-Box on squared residuals over plain GARCH(1,1)-t;
-  - expanding-window backtest at 60 origins gives empirical coverage of
-    ~80% at the 80% level and ~97% at the 95% level - well calibrated.
+    heavy tails (fitted nu ~ 5.5), which a normal GARCH cannot model;
+  - expanding-window backtest at 60 origins gives empirical coverage close to
+    nominal at both the 80% and 95% levels - well calibrated.
 
 This module just *produces* the forecast. The validation lives in the notebook.
 """
@@ -68,7 +66,7 @@ def forecast(
     levels: Tuple[float, ...] = (0.50, 0.80, 0.95),
 ) -> pd.DataFrame:
     """
-    Fit GJR-GARCH(1,1)-t on log-returns and produce a multi-step price forecast
+    Fit GARCH(1,1)-t on log-returns and produce a multi-step price forecast
     with prediction intervals.
 
     Parameters
@@ -96,17 +94,16 @@ def forecast(
     # Tiny parameters confuse the optimizer; multiplying by 100 fixes it.
     r_pct = np.log(df["y"]).diff().dropna().values * 100.0
 
-    # GJR-GARCH(1,1) with Student-t innovations. Constant mean because the
-    # drift is statistically indistinguishable from zero (validated in the
-    # notebook with HAC-robust standard errors).
-    am  = arch_model(r_pct, mean="Constant", vol="Garch",
-                     p=1, o=1, q=1, dist="t")
+    # GARCH(1,1) with Student-t innovations. Zero mean per the paper's
+    # Section II specification (drift is statistically indistinguishable
+    # from zero under HAC-robust SEs; see notebook 04 §2).
+    am  = arch_model(r_pct, mean="Zero", vol="Garch",
+                     p=1, q=1, dist="t")
     fit = am.fit(disp="off", show_warning=False)
 
     # Multi-step variance forecast in percent-squared units.
     var_fc_pct2 = fit.forecast(horizon=horizon).variance.iloc[-1].values
     step_var    = var_fc_pct2 / 10_000.0        # -> decimal squared
-    mu_frac     = fit.params["mu"] / 100.0      # per-day drift in log-returns
     nu          = float(fit.params["nu"])
 
     # Annualized volatility, % (handy summary statistic per-step).
@@ -126,8 +123,8 @@ def forecast(
         periods=horizon,
     )
 
-    drift = mu_frac * horizons
-    point = P0 * np.exp(drift)
+    # Zero-mean spec: point forecast is the last close at every horizon.
+    point = np.full(horizon, P0)
 
     out = pd.DataFrame({
         "run_date":     run_date,
@@ -141,8 +138,8 @@ def forecast(
     for lvl in levels:
         q   = std_t_ppf(0.5 + lvl / 2.0, nu)
         pct = int(round(lvl * 100))
-        out[f"lo_{pct}"] = P0 * np.exp(drift - q * cum_sd)
-        out[f"hi_{pct}"] = P0 * np.exp(drift + q * cum_sd)
+        out[f"lo_{pct}"] = P0 * np.exp(-q * cum_sd)
+        out[f"hi_{pct}"] = P0 * np.exp(+q * cum_sd)
 
     # Round for readability / stable CSV diffs across runs.
     round_cols = ["point", "ann_vol"] + [
@@ -348,7 +345,7 @@ def plot_forecast(
 
     fig.text(
         0.5, -0.02,
-        "GJR-GARCH(1,1)-t with Student-t innovations. Bands show 80% and 95% "
+        "GARCH(1,1)-t with Student-t innovations. Bands show 80% and 95% "
         "probability ranges; empirical coverage is within 3 pp of nominal "
         "across a 60-origin backtest.",
         ha="center", va="top",
